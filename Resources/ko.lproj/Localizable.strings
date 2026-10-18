@@ -43,7 +43,7 @@
 "None — can't switch" = "없음 — 바꿀 수 없음";
 "Convert words" = "단어 변환";
 "Start Paused" = "일시정지로 시작";
-"Start paused: resume with the pause key or input menu when needed. Each text field starts paused again." = "일시정지로 시작: 필요할 때 일시정지 키나 입력 메뉴로 켭니다. 입력창에 들어갈 때마다 다시 일시정지합니다.";
+"Start paused: resume with the pause key or input menu when needed. Tabs and windows in the same app keep your choice." = "일시정지로 시작: 필요할 때 일시정지 키나 입력 메뉴로 켭니다. 같은 앱의 탭·창에서는 켜거나 끈 상태를 유지합니다.";
 "Off: keys go to the app as typed, as with the ABC layout." = "끄면 키가 친 그대로 앱에 갑니다(ABC 자판처럼).";
 "App" = "앱";
 "Default · %@" = "기본 · %@";
@@ -82,6 +82,8 @@
 "Japanese Input in This App" = "이 앱에서 일본어 입력";
 "Esc Switches Language" = "Esc로 언어 바꾸기";
 "Use Default Settings in This App" = "이 앱에서 기본 설정 따르기";
+"Pause in This App (%@)" = "이 앱에서 일시정지 (%@)";
+"Pause in This App" = "이 앱에서 일시정지";
 "Pause in This Text Field (%@)" = "이 입력창에서 일시정지 (%@)";
 "Pause in This Text Field" = "이 입력창에서 일시정지";
 "Keys" = "키";

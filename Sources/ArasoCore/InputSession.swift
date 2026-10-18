@@ -369,8 +369,9 @@ public final class InputSession {
     /// The mode vim last reported (`vimChanged`), nil when no vim is reporting. In normal mode
     /// every key goes straight through; while vim reports at all, Esc is vim's.
     private var vimMode: VimSignal?
-    /// Paused by the user or the app's start policy: keys go through as typed until resumed.
-    public private(set) var paused = false
+    private let pauseState: AppPauseState
+    /// Shared across the app's text fields: keys go through as typed until resumed.
+    public var paused: Bool { pauseState.paused }
     /// Caps Lock was on when the word being typed (or the one just committed) started: the field
     /// is seen through `CapsLockClient` (`cased`), English going in in capitals.
     public private(set) var capsWord = false
@@ -428,7 +429,7 @@ public final class InputSession {
 
     public init(engine: DictionaryEngine, policies: AppPolicies = AppPolicies(),
                 converter: JapaneseConverter? = nil, japaneseEnabled: Bool = false, liveConversion: Bool = false,
-                returnConfirmsOnly: Bool = true, fixSlips: Bool = false) {
+                returnConfirmsOnly: Bool = true, fixSlips: Bool = false, pauseState: AppPauseState? = nil) {
         self.engine = engine
         self.policies = policies
         policy = policies.defaultPolicy
@@ -437,7 +438,7 @@ public final class InputSession {
         self.liveConversion = liveConversion
         self.returnConfirmsOnly = returnConfirmsOnly
         self.fixSlips = fixSlips
-        paused = policy.startPaused
+        self.pauseState = pauseState ?? AppPauseState(paused: policies.defaultPolicy.startPaused)
         if japaneseEnabled || policies.turnsJapaneseOn, let model = JapaneseModel.shared {
             japaneseSegmenter = JapaneseSegmenter(english: EnglishModel.shared, japanese: model)
         }
@@ -455,14 +456,14 @@ public final class InputSession {
         if fixing != nil { conversion = nil } // a fixed word's conversion goes with the fix
         fixing = nil
         recent.removeAll()
-        paused = policy.startPaused
+        pauseState.activate(app: bundleIdentifier, startPaused: policy.startPaused)
         resetRun()
     }
 
-    /// Pauses or resumes Araso in this text field; what was being typed goes in first.
+    /// Pauses or resumes Araso in this app; what was being typed goes in first.
     public func togglePause(client: TextClient?) {
         if !paused { commit(client: client) }
-        paused.toggle()
+        pauseState.toggle()
         previousLanguage = nil
         resetRun()
     }

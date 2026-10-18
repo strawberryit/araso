@@ -229,7 +229,7 @@ final class InputController: IMKInputController {
     }
 
     /// The pause key, a right modifier, pressed and released on its own within a moment: pause
-    /// or resume Araso in this text field. The app still gets the modifier's events, as a lone
+    /// or resume Araso in this app. The app still gets the modifier's events, as a lone
     /// modifier does nothing.
     @MainActor private func pauseTapChanged(_ event: NSEvent, client: IMKTextInput) {
         guard case .tap(let tap) = Runtime.shared.settings.pauseKey else { return }
@@ -401,7 +401,7 @@ final class InputController: IMKInputController {
         return NSScreen.screens.contains { $0.frame.insetBy(dx: -1, dy: -1).contains(rect.origin) }
     }
 
-    /// Pauses or resumes this text field, and says so under the caret.
+    /// Pauses or resumes this app, and says so under the caret.
     @MainActor private func togglePause(client: IMKTextInput?) {
         session.togglePause(client: client.map(textClient))
         StripHUD.hide(force: true)
@@ -529,12 +529,7 @@ final class InputController: IMKInputController {
             let policies = AppPolicies.load()
             let policy = policies.policy(for: app)
             // Reading the menu must not rebuild a stale session and commit its composition.
-            let paused: Bool
-            if let current, current.generation == runtime.generation {
-                paused = current.session.paused
-            } else {
-                paused = policy.startPaused
-            }
+            let paused = runtime.pauseState.paused(for: app) ?? policy.startPaused
             let menu = NSMenu()
             /// `enabled: false` leaves the action out: the input menu shows a copy of these items and
             /// enables every one with an action, so only an item without one comes out greyed.
@@ -549,11 +544,11 @@ final class InputController: IMKInputController {
                 item.representedObject = value
                 menu.addItem(item)
             }
-            // A temporary state of this text field first, then what is switched most, then the app's
+            // A temporary state of this app first, then what is switched most, then the app's
             // saved settings: word conversion and, under it, what only matters while it is on. The
             // names are the settings window's, so a choice reads the same in both.
-            add(runtime.settings.pauseKey == .off ? L("Pause in This Text Field")
-                    : L("Pause in This Text Field (%@)", runtime.settings.pauseKey.label),
+            add(runtime.settings.pauseKey == .off ? L("Pause in This App")
+                    : L("Pause in This App (%@)", runtime.settings.pauseKey.label),
                 #selector(togglePause(_:)), on: paused)
             menu.addItem(.separator())
             add(L("Japanese Input"), #selector(toggleJapanese(_:)), on: runtime.settings.japanese)
