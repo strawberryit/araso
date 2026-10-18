@@ -112,7 +112,10 @@ tests use `FakeTextField`). It owns the preview and hysteresis, commits, Esc rea
   caret, so it isn't affected.
 - The pause key (`Settings.pauseKey`: a right modifier tap, by default ⌘, read from flagsChanged, or a
   shortcut caught in keyDown, both in `InputController`) pauses the session until it is pressed again,
-  `activate`, or a settings change (a fresh session). The menu icon can't change, so `PauseHUD`
+  `activate`, or a settings change (a fresh session). Activation and fresh sessions apply the app's
+  `startPaused` policy (false by default); the pause key/menu can resume even when it starts paused.
+  In Apps, Convert words offers On / Start Paused / Off; Off still sets `enabled: false`.
+  The menu icon can't change, so `PauseHUD`
   shows the icon under the caret for a moment, struck through when paused (drawn by
   `make-icon.swift --slash`), for the menu's toggle too. It copies the system's input source
   indicator, measured on screen: size, gap, and the accent color's components taken as Display P3.

@@ -394,6 +394,16 @@ final class InputController: IMKInputController {
     @MainActor private func buildMenu() -> NSMenu {
         do {
             let runtime = Runtime.shared
+            let app = current?.session.app ?? client()?.bundleIdentifier()
+            let policies = AppPolicies.load()
+            let policy = policies.policy(for: app)
+            // Reading the menu must not rebuild a stale session and commit its composition.
+            let paused: Bool
+            if let current, current.generation == runtime.generation {
+                paused = current.session.paused
+            } else {
+                paused = policy.startPaused
+            }
             let menu = NSMenu()
             /// `enabled: false` leaves the action out: the input menu shows a copy of these items and
             /// enables every one with an action, so only an item without one comes out greyed.
@@ -413,15 +423,14 @@ final class InputController: IMKInputController {
             // settings window's, so a choice reads the same in both.
             add(runtime.settings.pauseKey == .off ? L("Pause in This Text Field")
                     : L("Pause in This Text Field (%@)", runtime.settings.pauseKey.label),
-                // A session from before a settings change is replaced, unpaused, on the next key.
-                #selector(togglePause(_:)), on: current.map { $0.generation == runtime.generation && $0.session.paused } ?? false)
+                #selector(togglePause(_:)), on: paused)
             menu.addItem(.separator())
-            if let app = current?.session.app ?? client()?.bundleIdentifier() {
-                let policies = AppPolicies.load()
-                let policy = policies.policy(for: app)
+            if let app {
                 let listed = policies.overrides[app] != nil
                 add(listed ? L("%@ — App Settings", AppName.of(app)) : L("%@ — Default Settings", AppName.of(app)), nil)
                 add(L("Convert Words"), #selector(toggleDisabled(_:)), on: policy.enabled, indent: 1, value: app)
+                add(L("Start Paused"), #selector(toggleStartPaused(_:)), on: policy.startPaused,
+                    enabled: policy.enabled, indent: 2, value: app)
                 // Greyed while words aren't converted: they only matter while they are.
                 add(L("Conversion: Normal"), #selector(setNormal(_:)),
                     on: policy.conversionThreshold < AppPolicy.strictThreshold, enabled: policy.enabled, indent: 2, value: app)
@@ -517,6 +526,11 @@ final class InputController: IMKInputController {
     @objc func toggleDisabled(_ sender: Any?) {
         guard let app = appOf(sender) else { return }
         MainActor.assumeIsolated { Runtime.shared.updatePolicy(for: app) { $0.enabled.toggle() } }
+    }
+
+    @objc func toggleStartPaused(_ sender: Any?) {
+        guard let app = appOf(sender) else { return }
+        MainActor.assumeIsolated { Runtime.shared.updatePolicy(for: app) { $0.startPaused.toggle() } }
     }
 
     @objc func removeAppEntry(_ sender: Any?) {

@@ -211,6 +211,30 @@ let splitting = SplittingEngine(base: sharedEngine, english: sharedEngine.englis
         try policies.save(to: url)
         #expect(AppPolicies.load(from: url).policy(for: "com.apple.Terminal") == AppPolicy(holdSpace: true))
     }
+
+    @Test func startPausedFollowsDefaultsAndSurvivesOtherEdits() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("seamtype-apps-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try Data(#"{"com.example.": {"startPaused": true}, "test.bad": {"startPaused": "true", "holdSpace": true}}"#.utf8).write(to: url)
+        var policies = AppPolicies.load(from: url)
+        #expect(!policies.defaultPolicy.startPaused)
+        #expect(policies.policy(for: "com.example.Terminal").startPaused)
+        #expect(!policies.policy(for: "test.bad").startPaused)
+        #expect(policies.policy(for: "test.bad").holdSpace)
+
+        var app = policies.policy(for: "com.example.Terminal")
+        app.conversionThreshold = AppPolicy.strictThreshold
+        policies.set(app, for: "com.example.Terminal")
+        #expect(policies.overrides["com.example.Terminal"] == .init(conversionThreshold: AppPolicy.strictThreshold, startPaused: true))
+        policies.setDefault(AppPolicy(startPaused: true))
+        policies.setEntry(.init(startPaused: false), for: "test.active")
+        try policies.save(to: url)
+        let loaded = AppPolicies.load(from: url)
+        #expect(loaded.defaultPolicy.startPaused)
+        #expect(loaded.policy(for: "com.example.Terminal").startPaused)
+        #expect(!loaded.policy(for: "test.active").startPaused)
+        #expect(loaded.overrides["*"] == .init(startPaused: true))
+    }
 }
 
 @MainActor @Suite struct SessionPolicyTests {

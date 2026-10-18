@@ -973,13 +973,20 @@ private struct AppRowView: View {
                     .accessibilityLabel(L("Remove %@", row.name))
             }
             HStack(alignment: .top, spacing: 18) {
-                Field(title: L("Convert words"), inherited: row.entry.enabled == nil) {
-                    FieldMenu(own: row.entry.enabled.map { $0 ? L("On") : L("Off") },
-                              inherited: defaultPolicy.enabled ? L("On") : L("Off"),
-                              choices: [(L("On"), true), (L("Off"), false)]) { value in
-                        model.setEntry(for: row.id) { $0.enabled = value }
+                Field(title: L("Convert words"), inherited: row.entry.enabled == nil && row.entry.startPaused == nil) {
+                    FieldMenu(own: row.entry.enabled == nil && row.entry.startPaused == nil ? nil
+                                : conversionName(row.entry.applied(to: defaultPolicy)),
+                              inherited: conversionName(defaultPolicy),
+                              choices: [(L("On"), (enabled: true, startPaused: false)),
+                                        (L("Start Paused"), (enabled: true, startPaused: true)),
+                                        (L("Off"), (enabled: false, startPaused: false))]) { value in
+                        model.setEntry(for: row.id) {
+                            $0.enabled = value?.enabled
+                            $0.startPaused = value?.startPaused
+                        }
                     }
                 }
+                .help(L("Start paused: resume with the pause key or input menu when needed. Each text field starts paused again."))
                 Group {
                     Field(title: L("Conversion"), inherited: row.entry.conversionThreshold == nil) {
                         FieldMenu(own: row.entry.conversionThreshold.map(Strictness.name),
@@ -1047,6 +1054,10 @@ private struct ChoiceRow<Choice: View>: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
+}
+
+private func conversionName(_ policy: AppPolicy) -> String {
+    policy.enabled ? (policy.startPaused ? L("Start Paused") : L("On")) : L("Off")
 }
 
 /// What Space or punctuation does to the word in an app (`AppPolicy.holdSpace`), as the Apps column shows it.

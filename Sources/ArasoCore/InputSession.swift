@@ -238,8 +238,7 @@ public final class InputSession {
     /// The mode vim last reported (`vimChanged`), nil when no vim is reporting. In normal mode
     /// every key goes straight through; while vim reports at all, Esc is vim's.
     private var vimMode: VimSignal?
-    /// The user paused Araso in this text field (the pause key): keys go through as typed
-    /// until the next tap or another text field.
+    /// Paused by the user or the app's start policy: keys go through as typed until resumed.
     public private(set) var paused = false
     /// Language of the current preview, so in-phrase symbols know where they belong.
     private var previewLanguage: Language?
@@ -300,6 +299,7 @@ public final class InputSession {
         self.japaneseEnabled = japaneseEnabled
         self.liveConversion = liveConversion
         self.returnConfirmsOnly = returnConfirmsOnly
+        paused = policy.startPaused
         if japaneseEnabled, let model = JapaneseModel.shared {
             segmenter = JapaneseSegmenter(english: EnglishModel.shared, japanese: model)
         }
@@ -314,7 +314,7 @@ public final class InputSession {
         policy = policies.policy(for: bundleIdentifier)
         previousLanguage = nil
         passedRun = nil
-        paused = false
+        paused = policy.startPaused
         resetRun()
     }
 
