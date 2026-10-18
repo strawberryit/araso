@@ -94,6 +94,21 @@ import Testing
         #expect(field.text.hasPrefix("안녕 "))
     }
 
+    @Test(arguments: [false, true])
+    func reactivationClearsURLContextAndKeepsThePauseChoice(startPaused: Bool) {
+        let policies = AppPolicies(overrides: ["test.app": .init(startPaused: startPaused)])
+        let session = InputSession(engine: learning, policies: policies)
+        session.activate(app: "test.app")
+        if startPaused { session.togglePause(client: field) }
+        type("https://x.io/", into: session)
+
+        field.cursor = 0
+        session.activate(app: "test.app")
+        #expect(!session.paused)
+        type("dkssud ", into: session)
+        #expect(field.text == "안녕 https://x.io/")
+    }
+
     @Test func aPastedURLCounts() {
         _ = session.handle(.other, client: field) // ⌘V
         field.insertText("https://x.io/", replacing: nil)

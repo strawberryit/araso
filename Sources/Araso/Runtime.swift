@@ -17,7 +17,11 @@ final class Runtime {
     private(set) var japaneseLoaded: Bool
     /// Converters a kanji reset threw away, which a replaced session must not save.
     let discardedConverters = DiscardedConverters()
-    private(set) var generation = 0
+    private(set) var generation = 0 {
+        didSet { pauseState.reset() }
+    }
+    /// Tabs and windows have separate controllers, but share the app's manual pause choice.
+    let pauseState = AppPauseState()
     /// The controller of the text field in front, which a vim mode change is about.
     weak var active: InputController?
     /// The latest vim mode change and the app vim runs in. Vim's FocusGained can arrive before
@@ -35,6 +39,12 @@ final class Runtime {
         japaneseLoaded = Self.needsJapanese(settings)
         engine = Self.makeEngine(japanese: japaneseLoaded)
         converter = japaneseLoaded ? Self.makeConverter(settings) : nil
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { note in
+            guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
+            MainActor.assumeIsolated { Runtime.shared.pauseState.applicationActivated(app.bundleIdentifier) }
+        }
         let center = DistributedNotificationCenter.default()
         center.addObserver(forName: SettingsNotice.changed, object: nil, queue: .main) { note in
             let kanjiReset = note.object as? String == SettingsNotice.kanjiReset
@@ -78,7 +88,7 @@ final class Runtime {
         let session = InputSession(engine: engine, policies: AppPolicies.load(),
                                    converter: converter,
                                    japaneseEnabled: settings.japanese, liveConversion: settings.liveConversion,
-                                   returnConfirmsOnly: settings.returnConfirmsOnly, fixSlips: settings.fixSlips)
+                                   returnConfirmsOnly: settings.returnConfirmsOnly, fixSlips: settings.fixSlips, pauseState: pauseState)
         session.replacements = textReplacements
         session.fullWidthDigits = settings.fullWidthDigits
         session.fullWidthSpace = settings.fullWidthSpace

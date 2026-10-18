@@ -272,9 +272,12 @@ tests use `FakeTextField`). It owns the preview and hysteresis, commits, Esc rea
   word the dictionary remembers keeps its language. `CapsLockTests`; `ARASO_CAPS_LOCK=1` for
   `araso-cli --type`.
 - The pause key (`Settings.pauseKey`: a right modifier tap, by default ⌘, read from flagsChanged, or a
-  shortcut caught in keyDown, both in `InputController`) pauses the session until it is pressed again,
-  `activate`, or a settings change (a fresh session). Activation and fresh sessions apply the app's
-  `startPaused` policy (false by default); the pause key/menu can resume even when it starts paused.
+  shortcut caught in keyDown, both in `InputController`) pauses the app until it is pressed again,
+  another app becomes frontmost, or a settings change. `Runtime.pauseState` (`AppPauseState`) is shared
+  by its sessions, so tabs, windows and new controllers in the same app keep the user's choice.
+  NSWorkspace app-activation notifications clear that choice when leaving, even if the other app
+  uses another input method; a generation change clears it too. The next session activation applies
+  the app's `startPaused` policy (false by default). The menu reads the shared state without rebuilding a session.
   In Apps, Convert words offers On / Start Paused / Off; Off still sets `enabled: false`.
   The menu icon can't change, so `PauseHUD`
   shows a white A under the caret for a moment, struck through on gray when paused (drawn at
