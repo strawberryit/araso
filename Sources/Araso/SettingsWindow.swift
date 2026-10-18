@@ -991,7 +991,9 @@ private struct AppRowView: View {
     /// What the app sets itself, as setting and value.
     private var own: [(name: String, value: String)] {
         var own: [(name: String, value: String)] = []
-        if let value = row.entry.enabled { own.append((L("Convert words"), value ? L("On") : L("Off"))) }
+        if row.entry.enabled != nil || row.entry.startPaused != nil {
+            own.append((L("Convert words"), conversionName(row.entry.applied(to: defaultPolicy))))
+        }
         if let value = row.entry.conversionThreshold { own.append((L("Conversion"), Strictness.name(value))) }
         if let value = row.entry.japanese { own.append((L("Japanese"), value ? L("On") : L("Off"))) }
         // What applies, not only what the entry names: 0.1.8's escapeToApp changes the default's keys.
@@ -1046,13 +1048,20 @@ private struct AppRowView: View {
             .accessibilityAddTraits(isOpen ? .isSelected : [])
             if isOpen {
                 VStack(alignment: .leading, spacing: 6) {
-                    Field(title: L("Convert words"), inherited: row.entry.enabled == nil) {
-                        FieldMenu(own: row.entry.enabled.map { $0 ? L("On") : L("Off") },
-                                  inherited: defaultPolicy.enabled ? L("On") : L("Off"),
-                                  choices: [(L("On"), true), (L("Off"), false)]) { value in
-                            model.setEntry(for: row.id) { $0.enabled = value }
+                    Field(title: L("Convert words"), inherited: row.entry.enabled == nil && row.entry.startPaused == nil) {
+                        FieldMenu(own: row.entry.enabled == nil && row.entry.startPaused == nil ? nil
+                                    : conversionName(row.entry.applied(to: defaultPolicy)),
+                                  inherited: conversionName(defaultPolicy),
+                                  choices: [(L("On"), (enabled: true, startPaused: false)),
+                                            (L("Start Paused"), (enabled: true, startPaused: true)),
+                                            (L("Off"), (enabled: false, startPaused: false))]) { value in
+                            model.setEntry(for: row.id) {
+                                $0.enabled = value?.enabled
+                                $0.startPaused = value?.startPaused
+                            }
                         }
                     }
+                    .help(L("Start paused: resume with the pause key or input menu when needed. Each text field starts paused again."))
                     Group {
                         Field(title: L("Conversion"), inherited: row.entry.conversionThreshold == nil) {
                             FieldMenu(own: row.entry.conversionThreshold.map(Strictness.name),
@@ -1135,6 +1144,10 @@ private struct ChoiceRow<Choice: View>: View {
             choice.pickerStyle(.segmented).labelsHidden().fixedSize()
         }
     }
+}
+
+private func conversionName(_ policy: AppPolicy) -> String {
+    policy.enabled ? (policy.startPaused ? L("Start Paused") : L("On")) : L("Off")
 }
 
 /// What Space or punctuation does to the word in an app (`AppPolicy.holdSpace`), as the Apps column shows it.

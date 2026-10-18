@@ -374,8 +374,7 @@ public final class InputSession {
     /// The mode vim last reported (`vimChanged`), nil when no vim is reporting. In normal mode
     /// every key goes straight through; while vim reports at all, Esc is vim's.
     private var vimMode: VimSignal?
-    /// The user paused Araso in this text field (the pause key): keys go through as typed
-    /// until the next tap or another text field.
+    /// Paused by the user or the app's start policy: keys go through as typed until resumed.
     public private(set) var paused = false
     /// Caps Lock was on when the word being typed (or the one just committed) started: the field
     /// is seen through `CapsLockClient` (`cased`), English going in in capitals.
@@ -443,6 +442,7 @@ public final class InputSession {
         self.liveConversion = liveConversion
         self.returnConfirmsOnly = returnConfirmsOnly
         self.fixSlips = fixSlips
+        paused = policy.startPaused
         if japaneseEnabled || policies.turnsJapaneseOn, let model = JapaneseModel.shared {
             japaneseSegmenter = JapaneseSegmenter(english: EnglishModel.shared, japanese: model)
         }
@@ -460,7 +460,7 @@ public final class InputSession {
         if fixing != nil { conversion = nil } // a fixed word's conversion goes with the fix
         fixing = nil
         recent.removeAll()
-        paused = false
+        paused = policy.startPaused
         resetRun()
     }
 

@@ -42,6 +42,9 @@
 "None" = "없음";
 "None — can't switch" = "없음 — 바꿀 수 없음";
 "Convert words" = "단어 변환";
+"Start Paused" = "일시정지로 시작";
+"Start paused: resume with the pause key or input menu when needed. Each text field starts paused again." = "일시정지로 시작: 필요할 때 일시정지 키나 입력 메뉴로 켭니다. 입력창에 들어갈 때마다 다시 일시정지합니다.";
+"Off: keys go to the app as typed, as with the ABC layout." = "끄면 키가 친 그대로 앱에 갑니다(ABC 자판처럼).";
 "App" = "앱";
 "Default · %@" = "기본 · %@";
 "Exceptions — only apps that differ" = "예외 앱 — 다르게 쓸 앱만";
