@@ -986,7 +986,7 @@ private struct AppRowView: View {
                         }
                     }
                 }
-                .help(L("Start paused: resume with the pause key or input menu when needed. Each text field starts paused again."))
+                .help(L("Start paused: resume with the pause key or input menu when needed. Tabs and windows in the same app keep your choice."))
                 Group {
                     Field(title: L("Conversion"), inherited: row.entry.conversionThreshold == nil) {
                         FieldMenu(own: row.entry.conversionThreshold.map(Strictness.name),

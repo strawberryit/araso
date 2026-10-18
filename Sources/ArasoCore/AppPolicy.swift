@@ -23,7 +23,7 @@ public enum SwitchKey: String, Codable, CaseIterable, Sendable {
 public struct AppPolicy: Codable, Equatable, Sendable {
     /// When false, Araso passes every key through (plain English typing).
     public var enabled: Bool
-    /// Begin each text-field activation paused; the pause key or menu can resume conversion.
+    /// Begin each app activation paused; tabs and windows share the pause key's manual choice.
     public var startPaused: Bool
     /// Convert away from the typed English letters only when the engine is at least
     /// this confident. On the held-out set, raising it above 0.5 left more Korean
