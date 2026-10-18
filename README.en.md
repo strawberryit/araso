@@ -463,8 +463,14 @@ it does with the system's input. English shortcuts are decided as usual.
 ### Pause
 
 Where every key is a command, like lazygit or htop in a terminal, tap **right ⌘** on its own. The
-word in progress goes in, and in that text field keys go through as typed. Tap again, move to
-another app or text field, or change a setting, to resume.
+word in progress goes in, and in that text field keys go through as typed. Tap again to resume.
+Moving to another app or text field, or changing a setting, restores the app's starting state (on by default).
+
+To start paused in a particular app, add it under **Apps** in settings and choose **Convert words →
+Start Paused**, or turn on **Start Paused** in the input menu. Resume with right ⌘ or **Pause in This
+Text Field** in the input menu when needed. Entering that app or text field again starts paused
+again. **Off** keeps conversion disabled even after pressing the pause key; choose **Start Paused**
+if you want to resume when needed.
 
 Each tap shows an A under the caret for a moment, like the input source indicator,
 struck through on gray when paused. The menu bar icon doesn't change, so to check later, look for the tick
@@ -507,7 +513,7 @@ are decided again at the shell.
 From the input menu (the menu bar, while Araso is selected) you can:
 
 - pause Araso in this text field (like the pause key)
-- turn word conversion on or off for the app in front, set its conversion threshold
+- turn word conversion on or off for the app in front, choose whether it starts paused, set its conversion threshold
   (Normal/Strict), whether Esc switches languages, whether the word is held after Space or
   punctuation and whether Japanese is on in it, or drop its settings. Those are greyed while
   conversion is off
@@ -580,13 +586,14 @@ unless you list it.
 ```json
 { "*":                     { "switchKeys": ["escape", "shiftEscape"] },
   "com.microsoft.VSCode":  { "switchKeys": ["rightOption", "shiftEscape"] },
-  "com.apple.Terminal":    { "conversionThreshold": 0.97 },
+  "com.apple.Terminal":    { "conversionThreshold": 0.97, "startPaused": true },
   "com.example.Game":      { "enabled": false } }
 ```
 
 | Key | Default | What it does |
 | --- | --- | --- |
 | `enabled` | `true` | `false` passes every key through (plain English). |
+| `startPaused` | `false` | `true` starts paused whenever a text field in this app becomes active. Resume with the pause key (right ⌘ by default) or input menu. Requires `enabled: true`. |
 | `conversionThreshold` | `0.5` | Convert away from the typed letters only when at least this sure. `0.97` (Strict) keeps short shell commands from turning into Hangul in a terminal; `0.5` converts more Korean when you write prose. |
 | `switchKeys` | `["rightOption", "shiftEscape"]` | The keys that switch readings ([language switch keys](#language-switch-keys)): `"rightOption"` (right ⌥ tapped alone), `"optionSpace"` (⌥Space), `"rightShift"` (right ⇧ tapped alone), `"escape"` (Esc), `"shiftEscape"` (⇧Esc). A key not chosen goes to the app. `escapeToApp`, from 0.1.8 and earlier, is read and carried over. |
 | `holdSpace` | `false` | Space or a punctuation mark (not a digit) goes inside the underline instead of ending the word. Like a word being typed, a switch key changes it and Delete deletes; the next word puts it in with that character. For terminals, which can't change a committed word, so set per app only (not in `"*"`); Return only confirms it, and text replacements don't fire. |

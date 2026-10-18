@@ -23,6 +23,8 @@ public enum SwitchKey: String, Codable, CaseIterable, Sendable {
 public struct AppPolicy: Codable, Equatable, Sendable {
     /// When false, Araso passes every key through (plain English typing).
     public var enabled: Bool
+    /// Begin each text-field activation paused; the pause key or menu can resume conversion.
+    public var startPaused: Bool
     /// Convert away from the typed English letters only when the engine is at least
     /// this confident. On the held-out set, raising it above 0.5 left more Korean
     /// words as letters without catching more wrong conversions, so it only pays
@@ -49,8 +51,9 @@ public struct AppPolicy: Codable, Equatable, Sendable {
 
     public init(enabled: Bool = true, conversionThreshold: Double = 0.5,
                 switchKeys: Set<SwitchKey> = AppPolicy.standardSwitchKeys, holdSpace: Bool = false,
-                fullWidth: Bool = true, japanese: Bool? = nil) {
+                fullWidth: Bool = true, japanese: Bool? = nil, startPaused: Bool = false) {
         self.enabled = enabled
+        self.startPaused = startPaused
         self.conversionThreshold = conversionThreshold
         self.switchKeys = switchKeys
         self.holdSpace = holdSpace
@@ -70,6 +73,7 @@ public struct AppPolicy: Codable, Equatable, Sendable {
     /// `{"conversionThreshold": 0.97}` keeps whatever the default says about the switch keys.
     public struct Override: Codable, Equatable, Sendable {
         public var enabled: Bool?
+        public var startPaused: Bool?
         public var conversionThreshold: Double?
         public var switchKeys: Set<SwitchKey>?
         public var holdSpace: Bool?
@@ -80,8 +84,9 @@ public struct AppPolicy: Codable, Equatable, Sendable {
         var escapeToApp: Bool?
 
         public init(enabled: Bool? = nil, conversionThreshold: Double? = nil, switchKeys: Set<SwitchKey>? = nil,
-                    holdSpace: Bool? = nil, fullWidth: Bool? = nil, japanese: Bool? = nil) {
+                    holdSpace: Bool? = nil, fullWidth: Bool? = nil, japanese: Bool? = nil, startPaused: Bool? = nil) {
             self.enabled = enabled
+            self.startPaused = startPaused
             self.conversionThreshold = conversionThreshold
             self.switchKeys = switchKeys
             self.holdSpace = holdSpace
@@ -96,7 +101,8 @@ public struct AppPolicy: Codable, Equatable, Sendable {
                       switchKeys: policy.switchKeys == base.switchKeys ? nil : policy.switchKeys,
                       holdSpace: policy.holdSpace == base.holdSpace ? nil : policy.holdSpace,
                       fullWidth: policy.fullWidth == base.fullWidth ? nil : policy.fullWidth,
-                      japanese: policy.japanese == base.japanese ? nil : policy.japanese)
+                      japanese: policy.japanese == base.japanese ? nil : policy.japanese,
+                      startPaused: policy.startPaused == base.startPaused ? nil : policy.startPaused)
         }
 
         /// The app's switch keys follow the default again, 0.1.8's `escapeToApp` gone with them.
@@ -115,11 +121,12 @@ public struct AppPolicy: Codable, Equatable, Sendable {
                              switchKeys: keys,
                              holdSpace: holdSpace ?? base.holdSpace,
                              fullWidth: fullWidth ?? base.fullWidth,
-                             japanese: japanese ?? base.japanese)
+                             japanese: japanese ?? base.japanese,
+                             startPaused: startPaused ?? base.startPaused)
         }
 
         private enum CodingKeys: String, CodingKey {
-            case enabled, conversionThreshold, switchKeys, holdSpace, fullWidth, japanese, escapeToApp
+            case enabled, startPaused, conversionThreshold, switchKeys, holdSpace, fullWidth, japanese, escapeToApp
         }
 
         public init(from decoder: Decoder) throws {
@@ -128,6 +135,7 @@ public struct AppPolicy: Codable, Equatable, Sendable {
             // name it, rather than failing the whole file.
             func value<T: Decodable>(_ key: CodingKeys) -> T? { (try? c.decodeIfPresent(T.self, forKey: key)) ?? nil }
             enabled = value(.enabled)
+            startPaused = value(.startPaused)
             conversionThreshold = value(.conversionThreshold)
             // A later version's key is skipped rather than failing the whole file.
             switchKeys = (value(.switchKeys) as [String]?).map { Set($0.compactMap(SwitchKey.init(rawValue:))) }
@@ -140,6 +148,7 @@ public struct AppPolicy: Codable, Equatable, Sendable {
         public func encode(to encoder: Encoder) throws {
             var c = encoder.container(keyedBy: CodingKeys.self)
             try c.encodeIfPresent(enabled, forKey: .enabled)
+            try c.encodeIfPresent(startPaused, forKey: .startPaused)
             try c.encodeIfPresent(conversionThreshold, forKey: .conversionThreshold)
             try c.encodeIfPresent(switchKeys.map(SwitchKey.list), forKey: .switchKeys)
             try c.encodeIfPresent(holdSpace, forKey: .holdSpace)
