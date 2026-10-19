@@ -8,6 +8,26 @@ import Testing
 @MainActor @Suite struct AppleConverterTests {
     let learning = FileManager.default.temporaryDirectory.appendingPathComponent("araso-apple-\(UUID().uuidString).json")
 
+    @Test(arguments: [false, true])
+    func doubleNTypesShinOsaka(live: Bool) throws {
+        let converter = try #require(AppleJapaneseConverter(learning: nil))
+        let field = FakeTextField()
+        let engine = DictionaryEngine(base: SplittingEngine(base: trilingual, english: trilingual.english,
+                                                          japanese: trilingual.segmenter), storeURL: learning)
+        let session = InputSession(engine: engine, converter: converter,
+                                   japaneseEnabled: true, liveConversion: live)
+        for ch in "sinnoosaka" { #expect(session.handle(.letter(ch), client: field)) }
+        #expect(field.text == (live ? "新大阪" : "しんおおさか"))
+        if !live {
+            #expect(session.handle(.printable(" "), client: field))
+            #expect(session.conversion?.kana == "しんおおさか")
+            #expect(field.text == "新大阪")
+        }
+        #expect(session.handle(.enter, client: field))
+        #expect(field.text == "新大阪")
+        #expect(field.markedRange().location == NSNotFound)
+    }
+
     @Test func variantKanjiAndEnglishSpellings() throws {
         guard let converter = AppleJapaneseConverter(learning: learning) else { return }
         #expect(converter.candidates(for: "たか").contains { $0.text == "髙" })

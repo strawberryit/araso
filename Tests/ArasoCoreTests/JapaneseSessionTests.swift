@@ -623,7 +623,8 @@ import Testing
     @Test func keysRemainderAfterKana() {
         #expect(InputSession.keys("kyouhaiitenki", after: 4) == "iitenki")
         #expect(InputSession.keys("kitte", after: 2) == "te")
-        #expect(InputSession.keys("konnichiha", after: 2) == "nichiha")
+        #expect(InputSession.keys("konnnichiha", after: 2) == "nichiha")
+        #expect(InputSession.keys("sinnoosaka", after: 2) == "oosaka")
     }
 }
 

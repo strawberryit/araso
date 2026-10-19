@@ -9,7 +9,8 @@ let trilingual = HeuristicEngine(english: sharedEngine.english, korean: sharedEn
     }
 
     @Test(arguments: [
-        ("konnichiha", "こんにちは"), ("watashihagakuseidesu", "わたしはがくせいです"), ("arigatougozaimasu", "ありがとうございます"),
+        ("konnnichiha", "こんにちは"), ("sinnoosaka", "しんおおさか"),
+        ("watashihagakuseidesu", "わたしはがくせいです"), ("arigatougozaimasu", "ありがとうございます"),
         ("kyouhaiitenkidesune", "きょうはいいてんきですね"), ("ra-mentabetai", "らーめんたべたい"), ("sumimasen", "すみません"),
         ("yoroshikuonegaishimasu", "よろしくおねがいします"), ("daijoubu", "だいじょうぶ"),
     ])

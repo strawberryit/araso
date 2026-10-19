@@ -49,10 +49,9 @@ public enum RomajiComposer {
                 if let next {
                     if next == "'" { emit("ん"); i += 2; continue }
                     if next == "n" {
-                        // "nni" → んに, "nn" → ん
-                        let after: Character? = i + 2 < chars.count ? chars[i + 2] : nil
+                        // Both keys complete ん: "nno" → んお, "nnno" → んの.
                         emit("ん")
-                        i += (after.map { vowels.contains($0) || $0 == "y" } ?? false) ? 1 : 2
+                        i += 2
                         continue
                     }
                     if !vowels.contains(next) && next != "y" { emit("ん"); i += 1; continue }
@@ -108,7 +107,7 @@ public enum RomajiComposer {
     }
 
     /// The shortest table entry for each single kana (ties: alphabetical); ん as "n'" so a
-    /// vowel typed after it can't take it over (n'a is んあ, nna would be んな).
+    /// vowel typed after it can't take it over (n'a is んあ).
     static let spelling: [Character: String] = {
         var s: [Character: String] = ["ん": "n'"]
         for (key, value) in table where value.count == 1 {
