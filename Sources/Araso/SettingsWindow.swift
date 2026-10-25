@@ -639,6 +639,16 @@ private struct GeneralPane: View {
                 SeamCard(title: L("Japanese input")) {
                     SeamToggleRow(title: L("Live conversion"), detail: L("Shows the top kanji candidate as you type."),
                                   isOn: binding(\.liveConversion))
+                    SeamRow(title: L("Candidate list size")) {
+                        Picker(L("Candidate list size"), selection: Binding(get: { model.settings.candidateListSize },
+                                                                           set: { model.set(\.candidateListSize, $0) })) {
+                            Text(L("Normal")).tag(CandidateListSize.normal)
+                            Text(L("Large")).tag(CandidateListSize.large)
+                            Text(L("Extra large")).tag(CandidateListSize.extraLarge)
+                        }
+                        .labelsHidden()
+                        .fixedSize()
+                    }
                     SeamToggleRow(title: L("Full-width numbers"), detail: L("１２３ after Japanese; Space offers 123."),
                                   isOn: binding(\.fullWidthDigits))
                     SeamToggleRow(title: L("Full-width space"), detail: L("A full-width space after Japanese; ⇧Space types the other width."),
