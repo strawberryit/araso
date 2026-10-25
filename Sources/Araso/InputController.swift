@@ -230,7 +230,7 @@ final class InputController: IMKInputController {
     /// that decides which.
     @MainActor private func syncStrip(_ client: IMKTextInput) {
         if let conversion = session.conversion {
-            StripHUD.show(conversion, clause: caretRect(client)) { [weak self] index in
+            StripHUD.show(conversion, size: Runtime.shared.settings.candidateListSize, clause: caretRect(client)) { [weak self] index in
                 guard let self, let input: IMKTextInput = self.client() else { return }
                 self.session.choose(index, client: self.textClient(input))
                 self.syncStrip(input)

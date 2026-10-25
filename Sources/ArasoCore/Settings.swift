@@ -1,5 +1,12 @@
 import Foundation
 
+/// The size of the candidate card, saved in settings.json as `candidateListSize`.
+public enum CandidateListSize: String, Codable, CaseIterable, Sendable {
+    case normal
+    case large
+    case extraLarge
+}
+
 /// User settings from `~/Library/Application Support/Araso/settings.json`:
 ///
 ///     { "japanese": true, "liveConversion": true }
@@ -12,6 +19,8 @@ public struct Settings: Codable, Equatable, Sendable {
     /// With Japanese on: show (and commit) the top kanji candidate while typing, like macOS
     /// Live Conversion. Space opens the other candidates, Esc shows the kana.
     public var liveConversion: Bool = false
+    /// Candidate card text and spacing; the language-switch strip keeps its usual size.
+    public var candidateListSize: CandidateListSize = .normal
     /// The key that pauses Araso in the text field (keys go through as typed) and resumes it.
     /// Builds before 0.1.15 had only right ⌘, turned off with `"rightCommandPause": false`.
     public var pauseKey: PauseKey = .standard
@@ -39,7 +48,9 @@ public struct Settings: Codable, Equatable, Sendable {
     public init(japanese: Bool = false, liveConversion: Bool = false, pauseKey: PauseKey = .standard,
                 returnConfirmsOnly: Bool = true, checkForUpdates: Bool = true, japaneseEngine: String = "apple",
                 fullWidthDigits: Bool = false, fullWidthSpace: Bool = false, latinLayout: LatinLayout = .qwerty,
-                koreanLayout: KoreanLayout = .dubeolsik, japaneseLayout: LatinLayout? = nil) {
+                koreanLayout: KoreanLayout = .dubeolsik, japaneseLayout: LatinLayout? = nil,
+                candidateListSize: CandidateListSize = .normal) {
+        self.candidateListSize = candidateListSize
         self.latinLayout = latinLayout
         self.koreanLayout = koreanLayout
         self.japaneseLayout = japaneseLayout
@@ -61,6 +72,7 @@ public struct Settings: Codable, Equatable, Sendable {
         }
         japanese = value(.japanese, false)
         liveConversion = value(.liveConversion, false)
+        candidateListSize = value(.candidateListSize, .normal)
         let legacy = try? decoder.container(keyedBy: LegacyKeys.self)
         let rightCommandPause = ((try? legacy?.decodeIfPresent(Bool.self, forKey: .rightCommandPause)) ?? nil) ?? true
         pauseKey = value(.pauseKey, rightCommandPause ? .standard : .off)

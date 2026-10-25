@@ -441,6 +441,7 @@ restart the input method: `pkill -x Araso`.
 | --- | --- | --- |
 | `japanese` | **off** | Detect romaji Japanese and convert it. |
 | `liveConversion` | off | While you type a Japanese phrase, show its top kanji candidate (`今日はいい天気でs`); Return commits it as shown. Like macOS Live Conversion. |
+| `candidateListSize` | `"normal"` | Candidate list size: `"normal"` (13pt), `"large"` (18pt), or `"extraLarge"` (22pt). Choose it in Settings → Languages → Japanese input → Candidate list size. Numbers, the reading and spacing grow with the text; the language-switch strip keeps its usual size. |
 | `returnConfirmsOnly` | on | Return on an underlined word only confirms it. Off, the app gets that Return too (a Japanese phrase is still only confirmed). |
 | `pauseKey` | `"rightCommand"` | The pause key (see [Pause](#pause)): `"rightCommand"`, `"rightOption"`, `"rightShift"` or `"rightControl"` tapped alone, `"off"`, or a shortcut such as `{ "keyCode": 35, "modifiers": ["control", "option"], "key": "P" }`. The older `"rightCommandPause": false` reads as `"off"`. |
 | `fullWidthDigits` | off | Numbers after Japanese come out full-width (`１２３`, `０３－１２３４` in addresses and phone numbers), underlined, with Space offering `123` (half-width) or conversions like `三月`. |

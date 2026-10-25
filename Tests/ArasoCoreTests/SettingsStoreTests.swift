@@ -29,6 +29,25 @@ import Testing
         #expect(!Settings.load(from: url).returnConfirmsOnly)
     }
 
+    @Test(arguments: CandidateListSize.allCases)
+    func candidateListSizeSurvivesOtherSettingsEdits(_ size: CandidateListSize) throws {
+        let url = dir.appendingPathComponent("settings.json")
+        try Settings(candidateListSize: size).save(to: url)
+        var settings = Settings.load(from: url)
+        #expect(settings.candidateListSize == size)
+        settings.japanese = true
+        try settings.save(to: url)
+        #expect(Settings.load(from: url).candidateListSize == size)
+    }
+
+    @Test(arguments: ["{}", #"{"candidateListSize":"future","japanese":true}"#,
+                      #"{"candidateListSize":20,"japanese":true}"#])
+    func invalidOrMissingCandidateListSizeKeepsTheDefault(_ json: String) throws {
+        let settings = try JSONDecoder().decode(Settings.self, from: Data(json.utf8))
+        #expect(settings.candidateListSize == .normal)
+        #expect(settings.japanese == (json != "{}"))
+    }
+
     /// Before pauseKey, right ⌘ was turned off with rightCommandPause; that still holds, and a
     /// save moves it into pauseKey.
     @Test func rightCommandPauseOffMeansNoPauseKey() throws {
