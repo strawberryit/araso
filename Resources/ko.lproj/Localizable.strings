@@ -18,6 +18,9 @@
 "Languages" = "언어";
 "Japanese" = "일본어";
 "Live conversion" = "라이브 변환";
+"Candidate list size" = "후보 목록 크기";
+"Large" = "크게";
+"Extra large" = "아주 크게";
 "Shows the top kanji candidate as you type." = "입력하면서 가장 앞선 한자 후보를 바로 보여 줍니다.";
 "Full-width numbers" = "전각 숫자";
 "Full-width space" = "전각 공백";

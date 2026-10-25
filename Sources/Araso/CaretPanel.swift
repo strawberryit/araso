@@ -315,6 +315,16 @@ private final class MarkView: NSView {
     }
 }
 
+private extension CandidateListSize {
+    var scale: CGFloat {
+        switch self {
+        case .normal: return 1
+        case .large: return 18.0 / 15
+        case .extraLarge: return 22.0 / 15
+        }
+    }
+}
+
 private extension Language {
     /// The language in its own script, as short as a row's end has room for.
     var script: String {
@@ -339,6 +349,10 @@ private extension Language {
 
     static let capsule = CellLook(height: CaretPanel.indicatorHeight, font: .systemFont(ofSize: 13, weight: .medium))
     static let row = CellLook(height: 26, font: .systemFont(ofSize: 15, weight: .medium))
+
+    func scaled(by scale: CGFloat) -> CellLook {
+        CellLook(height: height * scale, font: .systemFont(ofSize: font.pointSize * scale, weight: .medium))
+    }
 }
 
 /// One reading of the strip or candidate of the card: its number (candidates), its text cut at
@@ -347,8 +361,6 @@ private final class StripCell: NSView {
     static let pad: CGFloat = 10
     static let maxText: CGFloat = 220
     /// The numbers' digits are all as wide, so the candidates start at one x down the card.
-    private static let numberFont = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium)
-    private static let numberWidth = ceil(number(8).fittingSize.width) + 1
     private static let measure: NSTextField = {
         let label = Paper.label("", size: 15, weight: .medium)
         label.font = CellLook.row.font
@@ -367,28 +379,32 @@ private final class StripCell: NSView {
         NSPoint(x: x + 5, y: look.baseline - look.font.capHeight / 2 - MarkView.side / 2)
     }
 
-    private static func number(_ n: Int) -> NSTextField {
-        let label = Paper.label("\(n)", size: 11, weight: .medium)
-        label.font = numberFont
+    private static func number(_ n: Int, scale: CGFloat = 1) -> NSTextField {
+        let label = Paper.label("\(n)", size: 11 * scale, weight: .medium)
+        label.font = .monospacedDigitSystemFont(ofSize: 11 * scale, weight: .medium)
         return label
     }
 
     /// How wide a numbered cell for `string` is, without making one.
-    static func width(numbered string: String) -> CGFloat {
-        pad + numberWidth + 3 + textWidth(string) + pad
+    static func width(numbered string: String, scale: CGFloat) -> CGFloat {
+        let numberWidth = ceil(number(8, scale: scale).fittingSize.width) + 1
+        return (pad * 2 + 3) * scale + numberWidth + textWidth(string, scale: scale)
     }
 
     /// How wide `string` is in a card's row, cut as a cell cuts it.
-    static func textWidth(_ string: String) -> CGFloat {
+    static func textWidth(_ string: String) -> CGFloat { textWidth(string, scale: 1) }
+
+    private static func textWidth(_ string: String, scale: CGFloat) -> CGFloat {
+        measure.font = CellLook.row.scaled(by: scale).font
         measure.stringValue = string
-        return min(ceil(measure.fittingSize.width) + 1, maxText)
+        return min(ceil(measure.fittingSize.width) + 1, maxText * scale)
     }
 
     /// The card's footer, the reading and the page: its digits as wide as each other too, so the
     /// page count doesn't move it.
-    static func footer(_ text: String) -> NSTextField {
-        let label = Paper.label(text, size: 11)
-        label.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+    static func footer(_ text: String, scale: CGFloat = 1) -> NSTextField {
+        let label = Paper.label(text, size: 11 * scale)
+        label.font = .monospacedDigitSystemFont(ofSize: 11 * scale, weight: .regular)
         label.textColor = Paper.ink2
         return label
     }
@@ -412,22 +428,22 @@ private final class StripCell: NSView {
     /// `markColumn`: where the list's marks stand, past the widest text, so they line up; nil
     /// when nothing in the list has one.
     init(_ string: String, number: Int? = nil, mark: Mark? = nil, changed: Range<Int>? = nil,
-         look: CellLook? = nil, markColumn: CGFloat? = nil, language: Language? = nil) {
+         look: CellLook? = nil, markColumn: CGFloat? = nil, language: Language? = nil, scale: CGFloat = 1) {
         let look = look ?? .capsule
         self.look = look
         text = Paper.label(string, size: 13, weight: .medium)
         text.font = look.font
-        self.number = number.map(Self.number)
+        self.number = number.map { Self.number($0, scale: scale) }
         self.mark = mark
         languageLabel = language.map { Paper.label($0.script, size: 12, weight: .semibold) }
         super.init(frame: .zero)
-        var x = Self.pad
+        var x = Self.pad * scale
         if let number = self.number {
             Self.place(number, x: x, baseline: look.baseline)
             addSubview(number)
-            x = number.frame.maxX + 3
+            x = number.frame.maxX + 3 * scale
         }
-        Self.place(text, x: x, width: min(ceil(text.fittingSize.width) + 1, Self.maxText), baseline: look.baseline)
+        Self.place(text, x: x, width: min(ceil(text.fittingSize.width) + 1, Self.maxText * scale), baseline: look.baseline)
         addSubview(text)
         if let changed { underline(changed, of: string, x: x) }
         x = max(text.frame.maxX, x + (markColumn ?? 0))
@@ -444,7 +460,7 @@ private final class StripCell: NSView {
             addSubview(languageLabel)
             x = languageLabel.frame.maxX
         }
-        frame = NSRect(x: 0, y: 0, width: x + Self.pad, height: look.height)
+        frame = NSRect(x: 0, y: 0, width: x + Self.pad * scale, height: look.height)
         setAccessibilityElement(true)
         setAccessibilityRole(.staticText)
         var spoken = switch mark {
@@ -575,7 +591,7 @@ private final class StripCell: NSView {
 @MainActor enum StripHUD {
     private enum Shown: Equatable {
         case readings([String], [Mark?], numbered: Bool)
-        case candidates([String], page: Int)
+        case candidates([String], page: Int, size: CandidateListSize)
     }
 
     /// A capsule on its own on one line; the readings and candidates in a card `width` wide and
@@ -583,7 +599,7 @@ private final class StripCell: NSView {
     /// page (`footer`) under a hairline below them.
     private enum Layout {
         case row
-        case card(width: CGFloat, rows: Int, footer: (reading: String, page: String?)?)
+        case card(width: CGFloat, rows: Int, footer: (reading: String, page: String?)?, scale: CGFloat)
     }
 
     private static var panel: NSPanel?
@@ -616,7 +632,7 @@ private final class StripCell: NSView {
     private static let inset: CGFloat = 4
     private static let footerHeight: CGFloat = 24
     /// The card's width for the candidates it was last measured for.
-    private static var measured: (texts: [String], footer: String, width: CGFloat)?
+    private static var measured: (texts: [String], footer: String, scale: CGFloat, width: CGFloat)?
 
     private static var isUp: Bool { panel?.isVisible == true && !hiding }
 
@@ -640,7 +656,7 @@ private final class StripCell: NSView {
                           markColumn: markColumn, language: readings.languages.indices.contains($0) ? readings.languages[$0] : nil)
             }
             let width = ceil(cells.map(\.frame.width).max() ?? 0) + inset * 2
-            build(cells, layout: .card(width: width, rows: cells.count, footer: nil),
+            build(cells, layout: .card(width: width, rows: cells.count, footer: nil, scale: 1),
                   selected: readings.selected, word: word)
         }
         shown = next
@@ -653,28 +669,29 @@ private final class StripCell: NSView {
     /// `clause` is where the clause being converted starts; `choose` commits candidate `index` of
     /// the whole list. A card under the clause, nine rows to a page numbered for the digits, the
     /// reading and the page under them; as wide as the widest candidate on any page.
-    static func show(_ conversion: InputSession.Conversion, clause: NSRect, choose: @escaping (Int) -> Void) {
+    static func show(_ conversion: InputSession.Conversion, size: CandidateListSize, clause: NSRect, choose: @escaping (Int) -> Void) {
         self.choose = choose
         pick = nil
         generation += 1
         let texts = conversion.candidates.map(\.text)
         let page = conversion.selected / pageSize
-        let next = Shown.candidates(texts, page: page)
+        let scale = size.scale
+        let next = Shown.candidates(texts, page: page, size: size)
         if isUp, !settling, shown == next {
             select(conversion.selected % pageSize)
         } else {
             var turn: CGFloat?
-            if isUp, !settling, case .candidates(texts, let old)? = shown { turn = page > old ? 1 : -1 }
+            if isUp, !settling, case .candidates(texts, let old, size)? = shown { turn = page > old ? 1 : -1 }
             settling = false
             pageStart = page * pageSize
             let pages = (texts.count + pageSize - 1) / pageSize
             let pageText = { (page: Int) in pages > 1 ? "\(page + 1)/\(pages)" : nil }
             let cells = texts[pageStart..<min(pageStart + pageSize, texts.count)].enumerated().map {
-                StripCell($1, number: $0 + 1, look: .row)
+                StripCell($1, number: $0 + 1, look: CellLook.row.scaled(by: scale), scale: scale)
             }
             let widest = conversion.kana + (pageText(pages - 1).map { "   " + $0 } ?? "")
-            build(cells, layout: .card(width: cardWidth(texts, footer: widest), rows: min(pageSize, texts.count),
-                                       footer: (conversion.kana, pageText(page))),
+            build(cells, layout: .card(width: cardWidth(texts, footer: widest, scale: scale), rows: min(pageSize, texts.count),
+                                       footer: (conversion.kana, pageText(page)), scale: scale),
                   selected: conversion.selected % pageSize, word: clause, turn: turn)
         }
         shown = next
@@ -690,7 +707,7 @@ private final class StripCell: NSView {
         self.choose = choose
         pick = nil
         generation += 1
-        let next = Shown.candidates(guesses.texts, page: 0)
+        let next = Shown.candidates(guesses.texts, page: 0, size: .normal)
         if isUp, !settling, shown == next {
             select(guesses.selected)
         } else {
@@ -698,7 +715,7 @@ private final class StripCell: NSView {
             pageStart = 0
             let cells = guesses.texts.enumerated().map { StripCell($1, number: $0 + 1, changed: guesses.changed[$0], look: .row) }
             let width = ceil(cells.map(\.frame.width).max() ?? 0) + inset * 2
-            build(cells, layout: .card(width: width, rows: cells.count, footer: nil),
+            build(cells, layout: .card(width: width, rows: cells.count, footer: nil, scale: 1),
                   selected: guesses.selected, word: word, unfolds: true)
         }
         shown = next
@@ -740,12 +757,12 @@ private final class StripCell: NSView {
 
     /// Wide enough for every candidate in `texts`, whichever page it is on, and for `footer`, the
     /// widest the footer gets (the last page's count, its digits as wide as any).
-    private static func cardWidth(_ texts: [String], footer: String) -> CGFloat {
-        if let measured, measured.texts == texts, measured.footer == footer { return measured.width }
-        let widest = texts.map(StripCell.width(numbered:)).max() ?? 0
-        let footerWidth = ceil(StripCell.footer(footer).fittingSize.width) + 1 + StripCell.pad * 2
-        let width = ceil(max(widest, footerWidth)) + inset * 2
-        measured = (texts, footer, width)
+    private static func cardWidth(_ texts: [String], footer: String, scale: CGFloat) -> CGFloat {
+        if let measured, measured.texts == texts, measured.footer == footer, measured.scale == scale { return measured.width }
+        let widest = texts.map { StripCell.width(numbered: $0, scale: scale) }.max() ?? 0
+        let footerWidth = ceil(StripCell.footer(footer, scale: scale).fittingSize.width) + 1 + StripCell.pad * 2 * scale
+        let width = ceil(max(widest, footerWidth)) + inset * 2 * scale
+        measured = (texts, footer, scale, width)
         return width
     }
 
@@ -934,6 +951,10 @@ private final class StripCell: NSView {
         self.panel = panel
         panel.ignoresMouseEvents = false
 
+        let scale: CGFloat
+        if case .card(_, _, _, let value) = layout { scale = value } else { scale = 1 }
+        let inset = Self.inset * scale
+        let footerHeight = Self.footerHeight * scale
         let size: NSSize
         let rowHeight = cells.first?.frame.height ?? height
         var radius = rowHeight / 2
@@ -947,7 +968,7 @@ private final class StripCell: NSView {
                 x += cell.frame.width
             }
             size = NSSize(width: ceil(x), height: height)
-        case .card(let width, let rows, let text):
+        case .card(let width, let rows, let text, _):
             // The rows inside the paper's inset, cut at its edge, so a page turned slides in under it.
             let inside = FlippedView(frame: NSRect(x: inset, y: inset, width: width - inset * 2, height: CGFloat(rows) * rowHeight))
             inside.wantsLayer = true
@@ -963,19 +984,19 @@ private final class StripCell: NSView {
             radius = inset + rowHeight / 2
             clip = inside
             if let text {
-                let side = inset + StripCell.pad
-                let line = NSView(frame: NSRect(x: side, y: inside.frame.maxY + 3, width: width - side * 2, height: 1))
+                let side = inset + StripCell.pad * scale
+                let line = NSView(frame: NSRect(x: side, y: inside.frame.maxY + 3 * scale, width: width - side * 2, height: 1))
                 line.wantsLayer = true
                 line.effectiveAppearance.performAsCurrentDrawingAppearance { line.layer?.backgroundColor = Paper.line.cgColor }
                 footers.append(line)
-                let label = StripCell.footer(text.reading)
+                let label = StripCell.footer(text.reading, scale: scale)
                 label.sizeToFit()
-                label.setFrameOrigin(NSPoint(x: side, y: line.frame.maxY + 4))
+                label.setFrameOrigin(NSPoint(x: side, y: line.frame.maxY + 4 * scale))
                 footers.append(label)
                 if let page = text.page {
-                    let pageLabel = StripCell.footer(page)
+                    let pageLabel = StripCell.footer(page, scale: scale)
                     pageLabel.sizeToFit()
-                    pageLabel.setFrameOrigin(NSPoint(x: width - side - pageLabel.frame.width, y: line.frame.maxY + 4))
+                    pageLabel.setFrameOrigin(NSPoint(x: width - side - pageLabel.frame.width, y: line.frame.maxY + 4 * scale))
                     footers.append(pageLabel)
                 }
             }
@@ -988,7 +1009,7 @@ private final class StripCell: NSView {
         let strip = FlippedView(frame: NSRect(origin: NSPoint(x: margin, y: margin), size: size))
         strip.wantsLayer = true
         let track = capsule(NSRect(origin: .zero, size: size), radius: radius)
-        let thumb = capsule(cells[selected].frame)
+        let thumb = capsule(cells[selected].frame, radius: rowHeight / 2)
         root.effectiveAppearance.performAsCurrentDrawingAppearance {
             track.layer?.backgroundColor = Paper.background.cgColor
             track.layer?.borderColor = Paper.line.cgColor

@@ -485,6 +485,7 @@ vim이 모드가 바뀔 때마다 Araso에 알려 주므로, 입력 모드에서
 | --- | --- | --- |
 | `japanese` | **꺼짐** | 로마자 일본어를 알아보고 변환합니다. |
 | `liveConversion` | 꺼짐 | 일본어 구절을 치는 동안 가장 앞선 한자 후보를 보여 주고(`今日はいい天気でs`), Return을 누르면 보이는 대로 확정합니다. macOS의 실시간 변환과 같습니다. |
+| `candidateListSize` | `"normal"` | 후보 목록 크기. `"normal"`(보통, 15pt), `"large"`(크게, 18pt), `"extraLarge"`(아주 크게, 22pt). 설정 창의 언어 → 일본어 입력 → 후보 목록 크기에서 고릅니다. 번호·읽기·여백도 함께 커지고, 언어 바꾸기 띠의 크기는 그대로입니다. |
 | `returnConfirmsOnly` | 켜짐 | 밑줄 친 단어에서 누른 Return은 확정만 합니다. 끄면 앱도 그 Return을 받습니다(일본어 구절은 그대로 확정만). |
 | `fixSlips` | 꺼짐 | 키 하나가 꼬여 한국어로 읽히지 않는 단어를 단어 끝에서 원래 단어로 고칩니다([오타 추측](#오타-추측)). 바로 Delete를 누르면 되돌립니다. |
 | `pauseKey` | `"rightCommand"` | 일시정지 키([일시정지](#일시정지) 참고). `"rightCommand"`·`"rightOption"`·`"rightShift"`·`"rightControl"`은 그 키 단독, `"off"`는 끔, 단축키는 `{ "keyCode": 35, "modifiers": ["control", "option"], "key": "P" }`처럼 씁니다. 예전의 `"rightCommandPause": false`는 `"off"`로 읽습니다. |
