@@ -253,10 +253,12 @@ While a word is being typed it is underlined and shows the language Araso expect
 | A language switch key held half a second, then let go | [typo guesses](#typo-guesses): what the word was if one key slipped | nothing |
 | Esc | commit; the app gets the Esc (when chosen as a switch key, as above) | with live conversion, the kana first; on the kana, cancel the phrase (the app doesn't get it) |
 | Delete | English: the last letter. Korean: the syllable being typed jamo by jamo, earlier ones whole (한국 → 한구 → 한ㄱ → 한 → gone, as the system's 2-set does) | one kana at a time (かんこく → かんこ); with live conversion the last clause goes back to kana less one, the ones before it staying as shown (今日はいい天気 → 今日はいいてん), as in macOS's Japanese input |
+| Forward Delete (macOS: Del / Fn+⌫) | With **Forward Delete confirms first** on, commit the word, then delete one character after the caret (`hello\|world` → `hello\|orld`). Backspace is unchanged | commit the phrase as shown, then delete one character after the caret |
 | **Space** | commit, then a space | **convert to kanji** (candidate window) |
 | `, . ? !` and other symbols | commit, then the key | join the phrase, full-width: 、。？！ （）＿ 「」(`[ ]`) ・(`/`) 〜(`~`) |
 | `-` | commit, then `-` | ー |
 | Return | commit only (press again for a newline or to send; a setting) | commit as shown, kana or live-converted kanji (no newline) |
+| ⇧Return (macOS) | commit the word, then forward the original key, regardless of “Return only confirms” (requires macOS event-posting permission); without a composition, pass through | commit the phrase as shown, then forward the original key |
 | ⌃K / F7, ⌃J / F6 | (the app's shortcut) | katakana / hiragana (Space flips, Return commits) |
 | Tab, arrows, ⌘/⌃/⌥ | commit, the app gets the key (⌘ commits the moment it goes down, so ⌘V pastes after the word and a delete on ⌘⌫ doesn't skip it) | same |
 | **Right ⌘** (tapped on its own; a setting) | [pause](#pause) / resume Araso in this app | same |
@@ -557,7 +559,8 @@ restart the input method: `pkill -x Araso`.
 | `japanese` | **off** | Detect romaji Japanese and convert it. |
 | `liveConversion` | off | While you type a Japanese phrase, show its top kanji candidate (`今日はいい天気でs`); Return commits it as shown. Like macOS Live Conversion. |
 | `candidateListSize` | `"normal"` | Candidate list size: `"normal"` (15pt), `"large"` (18pt), or `"extraLarge"` (22pt). Choose it in Settings → Languages → Japanese input → Candidate list size. Numbers, the reading and spacing grow with the text; the language-switch strip keeps its usual size. |
-| `returnConfirmsOnly` | on | Return on an underlined word only confirms it. Off, the app gets that Return too (a Japanese phrase is still only confirmed). |
+| `returnConfirmsOnly` | on | Return on an underlined word only confirms it. Off, the app gets that Return after the commit (on macOS, requires the same event-posting permission as Shift+Return). Japanese phrases, candidate selection and the readings list still only confirm. |
+| `forwardDeleteCommits` | off | macOS only: Settings → Keys → Other keys → **Forward Delete confirms first**. Del / Fn+⌫ commits the composing word or kanji candidate, then deletes the character after the caret. Backspace is unchanged. Requires the same macOS event-posting permission as Shift+Return. |
 | `fixSlips` | off | A word one slipped key away from a Korean word, which can't be Korean as typed, goes in as that word at its end ([typo guesses](#typo-guesses)). Delete right after undoes it. |
 | `pauseKey` | `"rightCommand"` | The pause key (see [Pause](#pause)): `"rightCommand"`, `"rightOption"`, `"rightShift"` or `"rightControl"` tapped alone, `"off"`, or a shortcut such as `{ "keyCode": 35, "modifiers": ["control", "option"], "key": "P" }`. The older `"rightCommandPause": false` reads as `"off"`. |
 | `fullWidthDigits` | off | Numbers after Japanese come out full-width (`１２３`, `０３－１２３４` in addresses and phone numbers), underlined, with Space offering `123` (half-width) or conversions like `三月`. |

@@ -301,3 +301,5 @@
 "Corrected once · %ld days left" = "한 번 고침 · %ld일 남음";
 "With a particle: %@" = "조사가 붙어도: %@";
 "Examples" = "예시";
+"Forward Delete confirms first" = "앞으로 지우기 전에 조합 확정";
+"Del or Fn+Delete confirms the underlined word, then deletes the character after the cursor. Requires macOS event-posting permission." = "Del 또는 Fn+⌫로 밑줄 친 단어를 확정한 뒤 커서 뒤의 글자를 지웁니다. macOS 이벤트 전송 권한이 필요합니다.";

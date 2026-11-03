@@ -40,6 +40,24 @@ import Testing
         #expect(Settings.load(from: url).candidateListSize == size)
     }
 
+    @Test func forwardDeleteOptionSurvivesOtherSettingsEdits() throws {
+        let url = dir.appendingPathComponent("settings.json")
+        #expect(!Settings.load(from: url).forwardDeleteCommits)
+        try Settings(forwardDeleteCommits: true).save(to: url)
+        var settings = Settings.load(from: url)
+        #expect(settings.forwardDeleteCommits)
+        settings.japanese = true
+        try settings.save(to: url)
+        #expect(Settings.load(from: url).forwardDeleteCommits)
+    }
+
+    @Test(arguments: ["{}", #"{"forwardDeleteCommits":"true","japanese":true}"#])
+    func missingOrInvalidForwardDeleteOptionStaysOff(_ json: String) throws {
+        let settings = try JSONDecoder().decode(Settings.self, from: Data(json.utf8))
+        #expect(!settings.forwardDeleteCommits)
+        #expect(settings.japanese == (json != "{}"))
+    }
+
     @Test(arguments: ["{}", #"{"candidateListSize":"future","japanese":true}"#,
                       #"{"candidateListSize":20,"japanese":true}"#])
     func invalidOrMissingCandidateListSizeKeepsTheDefault(_ json: String) throws {
