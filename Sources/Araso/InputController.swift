@@ -31,6 +31,8 @@ final class InputController: IMKInputController {
     private var wordEndReported = false
     /// How many UTF-16 units of that word are on its first line, when it wraps.
     private var wordFirstLine: Int?
+    /// Invalidates a deferred line break if the text client or composition context changes.
+    private var contextGeneration: UInt64 = 0
 
     /// This client's session, rebuilt (after committing what was being typed) when a setting changed.
     @MainActor private var session: InputSession {
@@ -65,6 +67,7 @@ final class InputController: IMKInputController {
     }
 
     override func activateServer(_ sender: Any!) {
+        contextGeneration &+= 1
         super.activateServer(sender)
         let client = sender as? IMKTextInput
         client?.overrideKeyboard(withKeyboardNamed: "com.apple.keylayout.US")
@@ -90,6 +93,7 @@ final class InputController: IMKInputController {
     }
 
     override func deactivateServer(_ sender: Any!) {
+        contextGeneration &+= 1
         MainActor.assumeIsolated {
             session.commit(client: textInput(sender).map(textClient))
             StripHUD.hide(force: true)
@@ -99,6 +103,7 @@ final class InputController: IMKInputController {
     }
 
     override func commitComposition(_ sender: Any!) {
+        contextGeneration &+= 1
         MainActor.assumeIsolated {
             session.commitForNewContext(client: textInput(sender).map(textClient))
             StripHUD.hide(force: true)
@@ -128,6 +133,9 @@ final class InputController: IMKInputController {
             log.debug("flagsChanged key=\(event.keyCode) flags=\(event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue, format: .hex) client=\(sender is IMKTextInput)")
         }
         guard let event, let input = sender as? IMKTextInput else { return false }
+        if ShiftReturnReplay.matches(event) {
+            return false // already committed; the app gets the original command
+        }
         if event.type == .flagsChanged {
             MainActor.assumeIsolated {
                 // ⌘ going down: the word being typed goes in before the shortcut, since an app may
@@ -165,10 +173,31 @@ final class InputController: IMKInputController {
                 togglePause(client: input)
                 return true
             }
-            let key = key(for: event)
+            let typing = session
+            if event.isShiftReturn, typing.policy.enabled, !typing.paused, !typing.inVimNormalMode,
+               typing.fixing == nil, !typing.keys.isEmpty || typing.conversion != nil {
+                let generation = contextGeneration
+                let field = IMKClient(input, marks: self)
+                let target = NSWorkspace.shared.frontmostApplication?.processIdentifier
+                let replay = target.flatMap { ShiftReturnReplay(event: event, target: $0) }
+                // Complete the composition before delivering the app's modified key command.
+                field.deferShiftReturn(in: typing, capsLock: event.modifierFlags.contains(.capsLock), ifCurrent: { [weak self] in
+                    guard let self else { return false }
+                    return self.contextGeneration == generation && self.current?.session === typing
+                        && self.current?.generation == Runtime.shared.generation
+                        && (target == nil || NSWorkspace.shared.frontmostApplication?.processIdentifier == target)
+                }, forward: {
+                    if replay?.post() != true {
+                        log.notice("Shift+Return could not be forwarded; check event-posting permission app=\(typing.app ?? "?", privacy: .public)")
+                    }
+                }, completion: { [weak self] in self?.syncStrip(input) })
+                return true
+            }
+            let key = Self.key(for: event, policy: session.policy)
             noteWordRect(input)
             // The raw field: this `handle` notes Caps Lock for the word first, then applies `cased`.
-            let handled = session.handle(key, client: IMKClient(input, marks: self), capsLock: event.modifierFlags.contains(.capsLock))
+            let handled = session.handle(key, client: IMKClient(input, marks: self),
+                                         capsLock: event.modifierFlags.contains(.capsLock))
             if let dropped = session.fixingDropped {
                 session.fixingDropped = nil
                 // Positions only, never text.
@@ -460,10 +489,10 @@ final class InputController: IMKInputController {
 
     /// Maps a key-down event to a session key, preserving shifted arrows and configured switch
     /// keys. Letters use the chosen layout and Shift alone; other shortcuts become `.other`.
-    @MainActor private func key(for event: NSEvent) -> InputSession.Key {
+    @MainActor static func key(for event: NSEvent, policy: AppPolicy) -> InputSession.Key {
         let modifiers = event.modifierFlags.intersection([.command, .control, .option])
         if modifiers == .option, !event.modifierFlags.contains(.shift), event.keyCode == KeyCode.space,
-           session.policy.switchKeys.contains(.optionSpace) {
+           policy.switchKeys.contains(.optionSpace) {
             return .cycle // ⌥Space chosen as a switch key
         }
         if modifiers == .control {
@@ -476,14 +505,17 @@ final class InputController: IMKInputController {
         if !modifiers.isEmpty { return .other }
         if event.keyCode == KeyCode.escape, event.modifierFlags.contains(.shift) {
             // Not chosen: the app's ⇧Esc, after the word goes in as shown.
-            return session.policy.switchKeys.contains(.shiftEscape) ? .cycle : .other
+            return policy.switchKeys.contains(.shiftEscape) ? .cycle : .other
         }
         switch event.keyCode {
         case KeyCode.f7: return .katakana
         case KeyCode.f6: return .hiragana
         case KeyCode.delete: return .delete
         case KeyCode.escape: return .escape
-        case KeyCode.returnKey, KeyCode.keypadEnter: return .enter
+        case KeyCode.returnKey, KeyCode.keypadEnter:
+            // Shift+Return uses the app-command path; a composing word is handled separately
+            // above so plain Return's confirm-only setting doesn't swallow the line break.
+            return event.isShiftReturn ? .other : .enter
         case KeyCode.left: return event.modifierFlags.contains(.shift) ? .shiftLeft : .left
         case KeyCode.right: return event.modifierFlags.contains(.shift) ? .shiftRight : .right
         case KeyCode.down: return .down
@@ -692,13 +724,13 @@ final class InputController: IMKInputController {
 }
 
 /// `TextClient` over the IMK client proxy.
-private final class IMKClient: TextClient {
+final class IMKClient: TextClient {
     private let input: IMKTextInput
     /// Where the system's marked-text styles come from (`mark(forStyle:at:)`).
     private weak var marks: IMKInputController?
     private static let noRange = NSRange(location: NSNotFound, length: 0)
 
-    init(_ input: IMKTextInput, marks: IMKInputController) {
+    init(_ input: IMKTextInput, marks: IMKInputController? = nil) {
         self.input = input
         self.marks = marks
     }
@@ -738,6 +770,47 @@ private final class IMKClient: TextClient {
         input.insertText(text, replacementRange: range ?? Self.noRange)
     }
 
+    /// Consume the physical key before sending any text. Commit and replay use separate turns:
+    /// insertText returning does not establish that the client has removed its composition yet.
+    @MainActor func deferShiftReturn(in session: InputSession, capsLock: Bool,
+                                    ifCurrent: @escaping () -> Bool, forward: @escaping () -> Void,
+                                    afterCommit: @escaping (@escaping @MainActor () -> Void) -> Void = { work in
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(25)) { work() }
+                                    },
+                                    completion: @escaping () -> Void) {
+        DispatchQueue.main.async {
+            guard ifCurrent() else { return } // never insert into a client that has lost focus
+            _ = session.handle(.other, client: self, capsLock: capsLock)
+            afterCommit {
+                self.forwardShiftReturn(in: session, ifCurrent: ifCurrent, forward: forward,
+                                        afterCommit: afterCommit, completion: completion, attempt: 0)
+            }
+        }
+    }
+
+    @MainActor private func forwardShiftReturn(in session: InputSession, ifCurrent: @escaping () -> Bool,
+                                              forward: @escaping () -> Void,
+                                              afterCommit: @escaping (@escaping @MainActor () -> Void) -> Void,
+                                              completion: @escaping () -> Void, attempt: Int) {
+        // A new composing word must never receive the previous word's delayed Return.
+        guard ifCurrent(), session.keys.isEmpty, session.conversion == nil else { return }
+        let marked = input.markedRange()
+        if marked.location != NSNotFound, marked.length != NSNotFound, marked.length > 0 {
+            guard attempt < 7 else {
+                log.notice("shiftReturn replay=cancelled composition-still-marked app=\(self.input.bundleIdentifier() ?? "?", privacy: .public)")
+                completion()
+                return
+            }
+            afterCommit {
+                self.forwardShiftReturn(in: session, ifCurrent: ifCurrent, forward: forward,
+                                        afterCommit: afterCommit, completion: completion, attempt: attempt + 1)
+            }
+            return
+        }
+        forward()
+        completion()
+    }
+
     func selectedRange() -> NSRange { input.selectedRange() }
     func markedRange() -> NSRange { input.markedRange() }
 
@@ -754,6 +827,14 @@ private final class IMKClient: TextClient {
     var dropsEmptyInserts: Bool { true }
     /// Terminal, real keys (2026-11-05). Other terminals haven't been tried.
     var keysOnlyWhileMarked: Bool { input.bundleIdentifier() == "com.apple.Terminal" }
+}
+
+extension NSEvent {
+    /// Only Shift, with either Return key. Caps Lock and keypad flags don't make it a shortcut.
+    var isShiftReturn: Bool {
+        type == .keyDown && (keyCode == 36 || keyCode == 76)
+            && modifierFlags.intersection([.shift, .command, .control, .option]) == .shift
+    }
 }
 
 extension NSEvent.ModifierFlags {

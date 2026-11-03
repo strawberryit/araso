@@ -27,6 +27,7 @@ var targets: [Target] = [
 #if os(macOS)
 products.append(.executable(name: "Araso", targets: ["Araso"]))
 targets.append(.executableTarget(name: "Araso", dependencies: ["ArasoCore"]))
+targets.append(.testTarget(name: "ArasoTests", dependencies: ["Araso"]))
 #endif
 
 let package = Package(

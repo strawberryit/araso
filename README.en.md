@@ -257,6 +257,7 @@ While a word is being typed it is underlined and shows the language Araso expect
 | `, . ? !` and other symbols | commit, then the key | join the phrase, full-width: 、。？！ （）＿ 「」(`[ ]`) ・(`/`) 〜(`~`) |
 | `-` | commit, then `-` | ー |
 | Return | commit only (press again for a newline or to send; a setting) | commit as shown, kana or live-converted kanji (no newline) |
+| ⇧Return (macOS) | commit the word, then forward the original key, regardless of “Return only confirms” (requires macOS event-posting permission); without a composition, pass through | commit the phrase as shown, then forward the original key |
 | ⌃K / F7, ⌃J / F6 | (the app's shortcut) | katakana / hiragana (Space flips, Return commits) |
 | Tab, arrows, ⌘/⌃/⌥ | commit, the app gets the key (⌘ commits the moment it goes down, so ⌘V pastes after the word and a delete on ⌘⌫ doesn't skip it) | same |
 | **Right ⌘** (tapped on its own; a setting) | [pause](#pause) / resume Araso in this app | same |
