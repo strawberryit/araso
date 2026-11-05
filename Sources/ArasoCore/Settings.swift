@@ -24,6 +24,8 @@ public struct Settings: Codable, Equatable, Sendable {
     /// The key that pauses Araso in the text field (keys go through as typed) and resumes it.
     /// Builds before 0.1.15 had only right ⌘, turned off with `"rightCommandPause": false`.
     public var pauseKey: PauseKey = .standard
+    /// On macOS, keep the Start Paused focus indicator visible until the first key press.
+    public var pauseIndicatorUntilInput: Bool = false
     /// Return on an underlined word only confirms it, like a Japanese IME; off, the app gets the
     /// Return too (a Japanese phrase is still only confirmed).
     public var returnConfirmsOnly: Bool = true
@@ -59,8 +61,10 @@ public struct Settings: Codable, Equatable, Sendable {
                 fullWidthDigits: Bool = false, fullWidthSpace: Bool = false, latinLayout: LatinLayout = .qwerty,
                 koreanLayout: KoreanLayout = .dubeolsik, japaneseLayout: LatinLayout? = nil,
                 displayLanguage: String? = nil, fixSlips: Bool = false,
-                candidateListSize: CandidateListSize = .normal, forwardDeleteCommits: Bool = false) {
+                candidateListSize: CandidateListSize = .normal, forwardDeleteCommits: Bool = false,
+                pauseIndicatorUntilInput: Bool = false) {
         self.displayLanguage = displayLanguage
+        self.pauseIndicatorUntilInput = pauseIndicatorUntilInput
         self.forwardDeleteCommits = forwardDeleteCommits
         self.fixSlips = fixSlips
         self.candidateListSize = candidateListSize
@@ -89,6 +93,7 @@ public struct Settings: Codable, Equatable, Sendable {
         let legacy = try? decoder.container(keyedBy: LegacyKeys.self)
         let rightCommandPause = ((try? legacy?.decodeIfPresent(Bool.self, forKey: .rightCommandPause)) ?? nil) ?? true
         pauseKey = value(.pauseKey, rightCommandPause ? .standard : .off)
+        pauseIndicatorUntilInput = value(.pauseIndicatorUntilInput, false)
         returnConfirmsOnly = value(.returnConfirmsOnly, true)
         forwardDeleteCommits = value(.forwardDeleteCommits, false)
         fixSlips = value(.fixSlips, false)

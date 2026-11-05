@@ -143,6 +143,7 @@ final class Runtime {
     }
 
     private func apply(_ new: Settings) {
+        PauseHUD.dismissOnInput()
         let japanese = Self.needsJapanese(new)
         if japanese != japaneseLoaded {
             engine = Self.makeEngine(japanese: japanese)

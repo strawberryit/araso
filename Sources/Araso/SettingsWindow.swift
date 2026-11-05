@@ -756,6 +756,15 @@ private struct KeysPane: View {
                 }
                 .padding(.horizontal, 16).padding(.vertical, 12)
                 .animation(.snappy(duration: 0.2), value: pauseProblem)
+                SeamRow(title: L("Pause indicator on focus"),
+                        detail: L("Shown when focusing a text field in a Start Paused app while conversion is paused.")) {
+                    Picker(L("Pause indicator on focus"), selection: binding(\.pauseIndicatorUntilInput)) {
+                        Text(L("Show briefly")).tag(false)
+                        Text(L("Until typing")).tag(true)
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
             }
         }
     }

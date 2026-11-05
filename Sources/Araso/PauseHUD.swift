@@ -1,7 +1,7 @@
 import Cocoa
 
 /// A white A shown for a moment under the caret when Araso pauses (struck through, on gray) or
-/// resumes in a text field (on the accent color). The menu bar icon can't show it (the bundle is
+/// resumes in a text field (on the accent color). Focus reminders can stay until input. The menu bar icon can't show it (the bundle is
 /// signed, so the icon is fixed). It looks like the system's own input source indicator (macOS 26
 /// and later), centered under the caret; the joined mark doesn't read at this size.
 @MainActor enum PauseHUD {
@@ -9,6 +9,7 @@ import Cocoa
     private static var imageView: NSImageView?
     /// Bumped on every show, so an older fade-out leaves a newer icon alone.
     private static var shown = 0
+    private static var waitingForInput = false
 
     /// The system indicator's capsule.
     private static let size = NSSize(width: 30, height: CaretPanel.indicatorHeight)
@@ -43,7 +44,7 @@ import Cocoa
     }
 
     /// `caret` is the caret's line in screen coordinates, or `.zero` when the app doesn't say.
-    static func show(paused: Bool, caret: NSRect) {
+    static func show(paused: Bool, caret: NSRect, untilInput: Bool = false) {
         let (panel, imageView) = make()
         imageView.image = paused ? icons.paused : icons.on
         imageView.setAccessibilityLabel(paused ? L("Araso paused") : L("Araso resumed"))
@@ -58,6 +59,8 @@ import Cocoa
         panel.orderFrontRegardless()
 
         shown += 1
+        waitingForInput = untilInput
+        guard !untilInput else { return }
         let current = shown
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             guard current == shown else { return }
@@ -65,6 +68,14 @@ import Cocoa
                 MainActor.assumeIsolated { if current == shown { panel.orderOut(nil) } }
             }
         }
+    }
+
+    /// Only a focus reminder waits for input; manual pause/resume keeps its timed display.
+    static func dismissOnInput() {
+        guard waitingForInput else { return }
+        waitingForInput = false
+        shown += 1
+        panel?.orderOut(nil)
     }
 
     private static func make() -> (NSPanel, NSImageView) {
