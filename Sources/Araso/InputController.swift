@@ -33,6 +33,8 @@ final class InputController: IMKInputController {
     private var wordFirstLine: Int?
     /// Invalidates a deferred app key if the text client or composition context changes.
     private var contextGeneration: UInt64 = 0
+    /// A key received before the deferred focus reminder must keep it from appearing afterward.
+    private var receivedInputSinceActivation = false
 
     /// This client's session, rebuilt (after committing what was being typed) when a setting changed.
     @MainActor private var session: InputSession {
@@ -68,6 +70,7 @@ final class InputController: IMKInputController {
 
     override func activateServer(_ sender: Any!) {
         contextGeneration &+= 1
+        receivedInputSinceActivation = false
         super.activateServer(sender)
         let client = sender as? IMKTextInput
         client?.overrideKeyboard(withKeyboardNamed: "com.apple.keylayout.US")
@@ -78,6 +81,23 @@ final class InputController: IMKInputController {
             session.replacements = Runtime.shared.textReplacements
             if let last = Runtime.shared.lastVim { vimChanged(to: last.signal, from: last.app) }
             let policy = session.policy
+            if policy.enabled, policy.startPaused, session.paused, let client {
+                // Let the newly focused field finish activation before asking for its caret.
+                let context = contextGeneration
+                let generation = Runtime.shared.generation
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, self.contextGeneration == context,
+                          Runtime.shared.generation == generation,
+                          Runtime.shared.active === self,
+                          !self.receivedInputSinceActivation,
+                          let app, NSWorkspace.shared.frontmostApplication?.bundleIdentifier == app,
+                          self.session.policy.enabled, self.session.policy.startPaused,
+                          self.session.paused else { return }
+                    let caret = self.caretRect(client)
+                    PauseHUD.show(paused: true, caret: Self.plausible(caret) ? caret : .zero,
+                                  untilInput: Runtime.shared.settings.pauseIndicatorUntilInput)
+                }
+            }
             log.info("activate \(app ?? "?", privacy: .public) enabled=\(policy.enabled) threshold=\(policy.conversionThreshold) switchKeys=\(SwitchKey.allCases.filter(policy.switchKeys.contains).map(\.rawValue).joined(separator: ","), privacy: .public) holdSpace=\(policy.holdSpace) replacements=\(self.session.replacements.count)")
         }
     }
@@ -95,6 +115,7 @@ final class InputController: IMKInputController {
     override func deactivateServer(_ sender: Any!) {
         contextGeneration &+= 1
         MainActor.assumeIsolated {
+            PauseHUD.dismissOnInput()
             session.commit(client: textInput(sender).map(textClient))
             StripHUD.hide(force: true)
             Runtime.shared.converter?.save()
@@ -105,6 +126,7 @@ final class InputController: IMKInputController {
     override func commitComposition(_ sender: Any!) {
         contextGeneration &+= 1
         MainActor.assumeIsolated {
+            PauseHUD.dismissOnInput()
             session.commitForNewContext(client: textInput(sender).map(textClient))
             StripHUD.hide(force: true)
         }
@@ -133,6 +155,10 @@ final class InputController: IMKInputController {
             log.debug("flagsChanged key=\(event.keyCode) flags=\(event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue, format: .hex) client=\(sender is IMKTextInput)")
         }
         guard let event, let input = sender as? IMKTextInput else { return false }
+        if event.type == .keyDown {
+            receivedInputSinceActivation = true
+            MainActor.assumeIsolated { PauseHUD.dismissOnInput() }
+        }
         if CompositionKeyReplay.matches(event) {
             return false // already committed; the app gets the original command
         }

@@ -288,7 +288,12 @@ tests use `FakeTextField`). It owns the preview and hysteresis, commits, Esc rea
   In Apps, Convert words offers On / Start Paused / Off; Off still sets `enabled: false`.
   The menu icon can't change, so `PauseHUD`
   shows a white A under the caret for a moment, struck through on gray when paused (drawn at
-  runtime: the joined mark doesn't read at this size), for the menu's toggle too. It copies the system's input source
+  runtime: the joined mark doesn't read at this size), for the menu's toggle too. Focusing a text
+  field in an enabled `startPaused` app shows the paused indicator if it is still paused, on the
+  next main-queue turn with context, settings and foreground checks. `Settings.pauseIndicatorUntilInput`
+  keeps this focus reminder visible until keyDown, deactivation, a new composition context or a
+  settings change; otherwise it uses the usual 1.2-second display. Manual toggles stay timed.
+  Input before the deferred show cancels it. It copies the system's input source
   indicator, measured on screen: size, gap, and the accent color's components taken as Display P3.
 - After a word ends with Space or punctuation, only the word is inserted and `handle` returns
   false, so the app types the key itself, as the system Korean IME does. Inserting "word + space"

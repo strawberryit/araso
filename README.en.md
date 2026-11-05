@@ -476,8 +476,11 @@ App** in the input menu when needed. Returning from another app starts paused ag
 if you want to resume when needed.
 
 Each tap shows an A under the caret for a moment, like the input source indicator,
-struck through on gray when paused. The menu bar icon doesn't change, so to check later, look for the tick
-in the input menu.
+struck through on gray when paused. On macOS, focusing a text field in a **Start Paused** app also
+shows this indicator while paused. Under Settings → Keys → Other keys → **Pause indicator on focus**,
+choose **Show briefly** (default) or **Until typing**. The latter disappears on the first key press or
+when focus leaves the field. It stays hidden if you have manually resumed conversion.
+The menu bar icon doesn't change, so to check later, look for the tick in the input menu.
 
 Change the pause key under **Keys** in the settings window: right ⌘, ⌥, ⇧ or ⌃ tapped on its own, a
 recorded shortcut (one with ⌘, ⌃ or ⌥, like ⌃⌥P, or a function key alone), or none. A key that
@@ -559,6 +562,7 @@ restart the input method: `pkill -x Araso`.
 | `forwardDeleteCommits` | off | macOS only: Settings → Keys → Other keys → **Forward Delete confirms first**. Del / Fn+⌫ commits the composing word or kanji candidate, then deletes the character after the caret. Backspace is unchanged. Requires the same macOS event-posting permission as Shift+Return. |
 | `fixSlips` | off | A word one slipped key away from a Korean word, which can't be Korean as typed, goes in as that word at its end ([typo guesses](#typo-guesses)). Delete right after undoes it. |
 | `pauseKey` | `"rightCommand"` | The pause key (see [Pause](#pause)): `"rightCommand"`, `"rightOption"`, `"rightShift"` or `"rightControl"` tapped alone, `"off"`, or a shortcut such as `{ "keyCode": 35, "modifiers": ["control", "option"], "key": "P" }`. The older `"rightCommandPause": false` reads as `"off"`. |
+| `pauseIndicatorUntilInput` | off | macOS only: keep the focus reminder in Start Paused apps visible until the first key press. Off shows it for about 1.2 seconds. Manual pause/resume indicators still appear briefly. |
 | `fullWidthDigits` | off | Numbers after Japanese come out full-width (`１２３`, `０３－１２３４` in addresses and phone numbers), underlined, with Space offering `123` (half-width) or conversions like `三月`. |
 | `fullWidthSpace` | off | Space after Japanese types a full-width space (`　`). ⇧Space types the other width (full-width while this is off). |
 | `latinLayout` | `"qwerty"` | The layout English and romaji are typed on; also `"colemak"` or `"colemakDH"`. Korean stays on its usual keys (QWERTY's) whatever the layout. Words learned on one layout are learned again on another: their keys differ. |

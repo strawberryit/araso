@@ -159,6 +159,10 @@
 "Japanese input" = "일본어 입력";
 "Keys go through as typed in that text field, for hjkl in terminal programs. Press it again to resume." = "그 입력창에서는 키가 친 그대로 갑니다. 터미널의 hjkl 같은 곳에 씁니다. 한 번 더 누르면 다시 켜집니다.";
 "Pause" = "일시정지";
+"Pause indicator on focus" = "포커스 시 일시정지 표시";
+"Shown when focusing a text field in a Start Paused app while conversion is paused." = "‘일시정지로 시작’ 앱의 입력창에 포커스가 돌아오면 일시정지 상태를 표시합니다.";
+"Show briefly" = "잠깐 표시";
+"Until typing" = "입력할 때까지 표시";
 "Right %@ tap" = "오른쪽 %@ 단독";
 "Record Shortcut…" = "단축키 기록…";
 "Type a shortcut" = "단축키를 누르세요";
