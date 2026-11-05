@@ -1,15 +1,15 @@
 import Cocoa
 
-/// The original modified key, sent only to the app that had focus when it was pressed.
-/// Text insertion APIs cannot preserve a web editor's Shift+Return command.
-struct ShiftReturnReplay {
+/// An app command replayed after composition ends, only to the app that had focus.
+/// Text insertion APIs cannot preserve Shift+Return or Forward Delete.
+struct CompositionKeyReplay {
     private static let marker: Int64 = 0x415241534F52544E
     let target: pid_t
     let down: CGEvent
     let up: CGEvent
 
     init?(event: NSEvent, target: pid_t) {
-        guard event.isShiftReturn,
+        guard event.isShiftReturn || event.isForwardDelete,
               let down = event.cgEvent?.copy() ?? CGEvent(keyboardEventSource: nil, virtualKey: event.keyCode, keyDown: true),
               let up = down.copy() else { return nil }
         self.target = target
@@ -31,7 +31,7 @@ struct ShiftReturnReplay {
         event.cgEvent?.getIntegerValueField(.eventSourceUserData) == marker
     }
 
-    /// No permission prompt or unmodified-Return fallback: the user grants posting access first.
+    /// The user grants posting access first; never substitute text for the original command.
     @MainActor func post(authorized: () -> Bool = { CGPreflightPostEventAccess() },
                          deliver: (CGEvent, pid_t) -> Void = { event, pid in event.postToPid(pid) }) -> Bool {
         guard authorized() else { return false }

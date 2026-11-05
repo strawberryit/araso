@@ -733,6 +733,9 @@ private struct KeysPane: View {
                 SeamToggleRow(title: L("Return only confirms"),
                               detail: L("Return on an underlined word confirms it; press it again for a new line. Japanese is always only confirmed."),
                               isOn: binding(\.returnConfirmsOnly))
+                SeamToggleRow(title: L("Forward Delete confirms first"),
+                              detail: L("Del or Fn+Delete confirms the underlined word, then deletes the character after the cursor. Requires macOS event-posting permission."),
+                              isOn: binding(\.forwardDeleteCommits))
                 SeamToggleRow(title: L("Fix typos"),
                               detail: L("A Korean word with one key slipped (치다ㅏㄱ) goes in as the word meant (치다가); Delete right after undoes it. Hold the switch key for guesses either way."),
                               isOn: binding(\.fixSlips))

@@ -226,7 +226,7 @@ tests use `FakeTextField`). It owns the preview and hysteresis, commits, Esc rea
   `IMKClient.text(in:)` answers "" there (`input.length()`): the line's end is known.
   On macOS, Shift+Return while typing or choosing a candidate commits the composed text, then
   replays the original modified key to the app, regardless of `returnConfirmsOnly`
-  (`IMKClient.deferShiftReturn`, `ShiftReturnReplay`). The physical key is consumed without
+  (`IMKClient.deferCommitAndReplay`, `CompositionKeyReplay`). The physical key is consumed without
   inserting from its callback; the commit runs on the next main-queue turn. Replay runs separately
   after 25 ms, checking that the client's marked range has cleared (up to eight checks, 200 ms).
   A still-marked client, new composing word, or stale context cancels the replay. Clients that
@@ -239,6 +239,11 @@ tests use `FakeTextField`). It owns the preview and hysteresis, commits, Esc rea
   With no composition, while paused, or while fixing an earlier word, the existing path stays in
   use. `Tests/ArasoTests/ShiftReturnTests.swift` checks ordering, modifiers and permission denial
   with an injected poster; tests never post real keys.
+  The macOS-only `Settings.forwardDeleteCommits` (off by default, Keys → Other keys) uses the
+  same commit-then-replay path for Forward Delete (key code 117, Del / Fn+⌫). It commits the
+  displayed word or kanji candidate, then lets the app delete after the caret. Backspace (51),
+  shortcuts, and keys outside composition keep their existing paths. The same posting permission
+  and context/marked-range guards apply.
 - Vim reports its modes through `scripts/vim/araso.{lua,vim}` (`Araso --vim <mode> --app
   $__CFBundleIdentifier`, a distributed notification). `Runtime` hands it to the active controller,
   which takes it only if vim runs in its app (a signal without `--app`, only where Esc isn't a

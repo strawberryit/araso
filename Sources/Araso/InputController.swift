@@ -31,7 +31,7 @@ final class InputController: IMKInputController {
     private var wordEndReported = false
     /// How many UTF-16 units of that word are on its first line, when it wraps.
     private var wordFirstLine: Int?
-    /// Invalidates a deferred line break if the text client or composition context changes.
+    /// Invalidates a deferred app key if the text client or composition context changes.
     private var contextGeneration: UInt64 = 0
 
     /// This client's session, rebuilt (after committing what was being typed) when a setting changed.
@@ -133,7 +133,7 @@ final class InputController: IMKInputController {
             log.debug("flagsChanged key=\(event.keyCode) flags=\(event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue, format: .hex) client=\(sender is IMKTextInput)")
         }
         guard let event, let input = sender as? IMKTextInput else { return false }
-        if ShiftReturnReplay.matches(event) {
+        if CompositionKeyReplay.matches(event) {
             return false // already committed; the app gets the original command
         }
         if event.type == .flagsChanged {
@@ -174,21 +174,21 @@ final class InputController: IMKInputController {
                 return true
             }
             let typing = session
-            if event.isShiftReturn, typing.policy.enabled, !typing.paused, !typing.inVimNormalMode,
+            if event.needsDeferredCommit(settings: Runtime.shared.settings), typing.policy.enabled, !typing.paused, !typing.inVimNormalMode,
                typing.fixing == nil, !typing.keys.isEmpty || typing.conversion != nil {
                 let generation = contextGeneration
                 let field = IMKClient(input, marks: self)
                 let target = NSWorkspace.shared.frontmostApplication?.processIdentifier
-                let replay = target.flatMap { ShiftReturnReplay(event: event, target: $0) }
-                // Complete the composition before delivering the app's modified key command.
-                field.deferShiftReturn(in: typing, capsLock: event.modifierFlags.contains(.capsLock), ifCurrent: { [weak self] in
+                let replay = target.flatMap { CompositionKeyReplay(event: event, target: $0) }
+                // Complete the composition before delivering the app's key command.
+                field.deferCommitAndReplay(in: typing, capsLock: event.modifierFlags.contains(.capsLock), ifCurrent: { [weak self] in
                     guard let self else { return false }
                     return self.contextGeneration == generation && self.current?.session === typing
                         && self.current?.generation == Runtime.shared.generation
                         && (target == nil || NSWorkspace.shared.frontmostApplication?.processIdentifier == target)
                 }, forward: {
                     if replay?.post() != true {
-                        log.notice("Shift+Return could not be forwarded; check event-posting permission app=\(typing.app ?? "?", privacy: .public)")
+                        log.notice("Composition key could not be forwarded; check event-posting permission app=\(typing.app ?? "?", privacy: .public)")
                     }
                 }, completion: { [weak self] in self?.syncStrip(input) })
                 return true
@@ -772,7 +772,7 @@ final class IMKClient: TextClient {
 
     /// Consume the physical key before sending any text. Commit and replay use separate turns:
     /// insertText returning does not establish that the client has removed its composition yet.
-    @MainActor func deferShiftReturn(in session: InputSession, capsLock: Bool,
+    @MainActor func deferCommitAndReplay(in session: InputSession, capsLock: Bool,
                                     ifCurrent: @escaping () -> Bool, forward: @escaping () -> Void,
                                     afterCommit: @escaping (@escaping @MainActor () -> Void) -> Void = { work in
                                         DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(25)) { work() }
@@ -782,27 +782,27 @@ final class IMKClient: TextClient {
             guard ifCurrent() else { return } // never insert into a client that has lost focus
             _ = session.handle(.other, client: self, capsLock: capsLock)
             afterCommit {
-                self.forwardShiftReturn(in: session, ifCurrent: ifCurrent, forward: forward,
+                self.forwardCommittedKey(in: session, ifCurrent: ifCurrent, forward: forward,
                                         afterCommit: afterCommit, completion: completion, attempt: 0)
             }
         }
     }
 
-    @MainActor private func forwardShiftReturn(in session: InputSession, ifCurrent: @escaping () -> Bool,
+    @MainActor private func forwardCommittedKey(in session: InputSession, ifCurrent: @escaping () -> Bool,
                                               forward: @escaping () -> Void,
                                               afterCommit: @escaping (@escaping @MainActor () -> Void) -> Void,
                                               completion: @escaping () -> Void, attempt: Int) {
-        // A new composing word must never receive the previous word's delayed Return.
+        // A new composing word must never receive the previous word's delayed key.
         guard ifCurrent(), session.keys.isEmpty, session.conversion == nil else { return }
         let marked = input.markedRange()
         if marked.location != NSNotFound, marked.length != NSNotFound, marked.length > 0 {
             guard attempt < 7 else {
-                log.notice("shiftReturn replay=cancelled composition-still-marked app=\(self.input.bundleIdentifier() ?? "?", privacy: .public)")
+                log.notice("compositionKey replay=cancelled composition-still-marked app=\(self.input.bundleIdentifier() ?? "?", privacy: .public)")
                 completion()
                 return
             }
             afterCommit {
-                self.forwardShiftReturn(in: session, ifCurrent: ifCurrent, forward: forward,
+                self.forwardCommittedKey(in: session, ifCurrent: ifCurrent, forward: forward,
                                         afterCommit: afterCommit, completion: completion, attempt: attempt + 1)
             }
             return
@@ -830,6 +830,16 @@ final class IMKClient: TextClient {
 }
 
 extension NSEvent {
+    /// Fn+Delete arrives as the Forward Delete key code; Fn itself is not a shortcut here.
+    var isForwardDelete: Bool {
+        type == .keyDown && keyCode == 117
+            && modifierFlags.intersection([.shift, .command, .control, .option]).isEmpty
+    }
+
+    func needsDeferredCommit(settings: Settings) -> Bool {
+        isShiftReturn || (settings.forwardDeleteCommits && isForwardDelete)
+    }
+
     /// Only Shift, with either Return key. Caps Lock and keypad flags don't make it a shortcut.
     var isShiftReturn: Bool {
         type == .keyDown && (keyCode == 36 || keyCode == 76)

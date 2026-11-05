@@ -27,6 +27,8 @@ public struct Settings: Codable, Equatable, Sendable {
     /// Return on an underlined word only confirms it, like a Japanese IME; off, the app gets the
     /// Return too (a Japanese phrase is still only confirmed).
     public var returnConfirmsOnly: Bool = true
+    /// On macOS, commit the underlined word before replaying Forward Delete to the app.
+    public var forwardDeleteCommits: Bool = false
     /// A Korean word that can't be Korean as typed, one slip of the fingers from a word (치다ㅏㄱ for
     /// 치다가), goes in as that word at its end (`SlipGuesser.autoFix`); Delete right after undoes it.
     /// Off, the switch key held still lists the guesses.
@@ -57,8 +59,9 @@ public struct Settings: Codable, Equatable, Sendable {
                 fullWidthDigits: Bool = false, fullWidthSpace: Bool = false, latinLayout: LatinLayout = .qwerty,
                 koreanLayout: KoreanLayout = .dubeolsik, japaneseLayout: LatinLayout? = nil,
                 displayLanguage: String? = nil, fixSlips: Bool = false,
-                candidateListSize: CandidateListSize = .normal) {
+                candidateListSize: CandidateListSize = .normal, forwardDeleteCommits: Bool = false) {
         self.displayLanguage = displayLanguage
+        self.forwardDeleteCommits = forwardDeleteCommits
         self.fixSlips = fixSlips
         self.candidateListSize = candidateListSize
         self.latinLayout = latinLayout
@@ -87,6 +90,7 @@ public struct Settings: Codable, Equatable, Sendable {
         let rightCommandPause = ((try? legacy?.decodeIfPresent(Bool.self, forKey: .rightCommandPause)) ?? nil) ?? true
         pauseKey = value(.pauseKey, rightCommandPause ? .standard : .off)
         returnConfirmsOnly = value(.returnConfirmsOnly, true)
+        forwardDeleteCommits = value(.forwardDeleteCommits, false)
         fixSlips = value(.fixSlips, false)
         checkForUpdates = value(.checkForUpdates, true)
         japaneseEngine = value(.japaneseEngine, "apple")
